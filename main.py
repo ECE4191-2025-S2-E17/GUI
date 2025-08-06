@@ -15,7 +15,7 @@ class MainWindow(QMainWindow):
 
         # Using webcam for now
         self.video_feed = cv2.VideoCapture(0) 
-        # self.video_feed = cv2.VideoCapture("vid.mp4") # Can use a video file instead, will be very fast for now
+        # self.video_feed = cv2.VideoCapture("video_path.mp4") # Can use a video file instead, will be very fast for now
 
         # Create timer to update frames
         self.timer = QTimer()
