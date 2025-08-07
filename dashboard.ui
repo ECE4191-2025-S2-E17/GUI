@@ -36,7 +36,8 @@
 }
 
 #Video {
-	border: 0.3px solid black;
+	border: none;
+    border-radius: 10px;
 }
 
 #SpeciesContainer {

@@ -1,7 +1,7 @@
 import sys
 import cv2
-from PyQt5.QtWidgets import QApplication, QMainWindow
-from PyQt5.QtGui import QImage, QPixmap
+from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsDropShadowEffect
+from PyQt5.QtGui import QImage, QPixmap, QColor
 from PyQt5.QtCore import QTimer
 from ui_main import Ui_MainWindow 
 
@@ -16,6 +16,14 @@ class MainWindow(QMainWindow):
         # Using webcam for now
         self.video_feed = cv2.VideoCapture(0) 
         # self.video_feed = cv2.VideoCapture("video_path.mp4") # Can use a video file instead, will be very fast for now
+
+
+        # Set up shadow effect for the video display
+        shadow = QGraphicsDropShadowEffect()
+        shadow.setBlurRadius(15)
+        shadow.setOffset(0, 0)
+        shadow.setColor(QColor(0, 0, 0, 180))
+        self.ui.Video.setGraphicsEffect(shadow)
 
         # Create timer to update frames
         self.timer = QTimer()
@@ -32,7 +40,8 @@ class MainWindow(QMainWindow):
             bytes_per_line = ch * w
             qt_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888)
             pixmap = QPixmap.fromImage(qt_image)
-            self.ui.listWidget.addItem("Species: Kangaroo")
+            #self.ui.listWidget.addItem("Species: Kangaroo")
+
 
             
             self.ui.Video.setPixmap(pixmap)
