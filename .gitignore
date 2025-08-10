@@ -1,2 +1,5 @@
-venv
 __pycache__
+pyqt5/venv
+pyqt5/__pycache__
+flask/venv
+flask/__pycache__

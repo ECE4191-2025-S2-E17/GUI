@@ -25,6 +25,9 @@ class MainWindow(QMainWindow):
         shadow.setColor(QColor(0, 0, 0, 180))
         self.ui.Video.setGraphicsEffect(shadow)
 
+        # Set the window title
+ 
+
         # Create timer to update frames
         self.timer = QTimer()
         self.timer.timeout.connect(self.update_frame)

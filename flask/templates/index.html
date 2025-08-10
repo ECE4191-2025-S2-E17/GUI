@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+
+{% block body %}
+
+
+<h1>Wildlife Monitoring Dashboard</h1>
+
+<div class="container">
+    <div class="video">
+        <img src="{{ url_for('video_feed') }}" width="640" height="480">
+    </div>
+    <div class="Animal Sighting">
+        <h2>Sensor Data</h2>
+        <p>Temperature: <span id="temp">--</span> °C</p>
+        <p>Humidity: <span id="hum">--</span> %</p>
+    </div>
+</div>
+
+<script>
+
+</script>
+
+
+
+{% endblock %}
+
