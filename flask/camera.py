@@ -3,6 +3,7 @@ import cv2
 class VideoCamera:
     def __init__(self, source=0):
         self.video = cv2.VideoCapture(source)
+        self.source = source
 
     def get_frame(self):
         success, image = self.video.read()

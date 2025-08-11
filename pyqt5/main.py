@@ -5,6 +5,9 @@ from PyQt5.QtGui import QImage, QPixmap, QColor
 from PyQt5.QtCore import QTimer
 from ui_main import Ui_MainWindow 
 
+IP_URL = "rtsp://10.0.0.211"
+
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -14,7 +17,7 @@ class MainWindow(QMainWindow):
         self.ui.setupUi(self)
 
         # Using webcam for now
-        self.video_feed = cv2.VideoCapture(0) 
+        self.video_feed = cv2.VideoCapture(IP_URL) 
         # self.video_feed = cv2.VideoCapture("video_path.mp4") # Can use a video file instead, will be very fast for now
 
 

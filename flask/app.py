@@ -3,8 +3,13 @@ from camera import VideoCamera
 import random
 import time
 
+IP_URL = "rtsp://10.0.0.211"
+IP_URL = 0
+
 app = Flask(__name__)
-camera = VideoCamera()
+camera = VideoCamera(IP_URL)
+
+
 
 @app.route('/')
 def index():

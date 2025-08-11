@@ -1,27 +1,41 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wildlife Monitor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
 
-
-{% block body %}
-
-
-<h1>Wildlife Monitoring Dashboard</h1>
-
-<div class="container">
-    <div class="video">
-        <img src="{{ url_for('video_feed') }}" width="640" height="480">
+<div class="app">
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="logo"></div>
+        <div class="icon"></div>
+        <div class="icon"></div>
+        <div class="icon"></div>
     </div>
-    <div class="Animal Sighting">
-        <h2>Sensor Data</h2>
-        <p>Temperature: <span id="temp">--</span> °C</p>
-        <p>Humidity: <span id="hum">--</span> %</p>
+
+    <!-- Main content -->
+    <div class="main">
+
+        <div class="col_1">
+            <div class="box big">
+                <img src="{{ url_for('video_feed') }}"/>
+            </div>
+        </div>
+
+        <div class="col_2">
+            <div class="box right-top">
+                <h2>Sightings</h2>
+            </div>
+            <div class="box bottom-right">
+                <h2>Status </h2>
+            </div>
+        </div>
     </div>
 </div>
 
-<script>
-
-</script>
-
-
-
-{% endblock %}
-
+</body>
+</html>
