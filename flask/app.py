@@ -1,9 +1,13 @@
-from flask import Flask, render_template, Response, jsonify
+from flask import Flask, render_template, Response, jsonify, send_file
 from camera import VideoCamera
-import random
+import cv2
 import time
+import io
 
-IP_URL = "rtsp://10.0.0.211"
+
+
+#IP_URL = "rtsp://118.139.84.194"
+# IP_URL = "http://10.181.5.98/stream" 
 IP_URL = 0
 
 app = Flask(__name__)
@@ -26,15 +30,19 @@ def video_feed():
     return Response(generate_frames(),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
 
-@app.route('/sensor_data')
-def sensor_data():
+@app.route('/screenshot')
+def screenshot():
     # Simulate sensor readings
-    data = {
-        "temperature": round(random.uniform(20, 25), 2),
-        "humidity": round(random.uniform(40, 60), 2),
-        "timestamp": int(time.time())
-    }
-    return jsonify(data)
+    success, image = camera.video.read()
+    cv2.imwrite('screenshot.jpg', image)
+    return jsonify({"screenshot": "happened"})
+
+@app.route('/record')
+def toggle_recording():
+    # Simulate sensor readings
+    camera.recording = not camera.recording
+    print("Camera Recording: ", camera.recording)
+    return jsonify({"recording": camera.recording})
 
 if __name__ == '__main__':
     #app.run(host='0.0.0.0', port=5000, threaded=True)
