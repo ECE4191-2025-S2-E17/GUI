@@ -12,17 +12,28 @@ body {
     box-sizing: border-box;
 }
 
+.side {
+    width: 60px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
 /* Sidebar */
 .sidebar {
     width: 60px;
     background-color: #111;
     border-radius: 20px;
     display: flex;
+    height: 100%;
     flex-direction: column;
     align-items: center;
     padding: 15px 0;
     gap: 20px;
 }
+
 
 .sidebar .logo {
     background-color: #333;
@@ -45,6 +56,7 @@ body {
     grid-template-columns: 16fr 8fr;
     gap: 15px;
     margin-left: 20px;
+    height: 100%;
 }
 
 .box {
@@ -69,7 +81,7 @@ body {
 
 .bottom-right {
     grid-column: 2 / 3;
-    height:auto;
+    height: 30%;
 }
 .box.big {
     display: flex;

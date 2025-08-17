@@ -40,8 +40,7 @@ def screenshot():
 @app.route('/record')
 def toggle_recording():
     # Simulate sensor readings
-    camera.recording = not camera.recording
-    print("Camera Recording: ", camera.recording)
+    camera.toggle_recording()
     return jsonify({"recording": camera.recording})
 
 if __name__ == '__main__':
