@@ -6,9 +6,10 @@ import io
 
 
 
-#IP_URL = "rtsp://118.139.84.194"
+IP_URL = "rtsp://118.139.84.194"
+IP_URL = "rtsp://10.0.0.211"
 # IP_URL = "http://10.181.5.98/stream" 
-IP_URL = 0
+#IP_URL = 0
 
 app = Flask(__name__)
 camera = VideoCamera(IP_URL)
