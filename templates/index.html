@@ -34,7 +34,7 @@
                     </button>
 
                     <button class="img-btn" id="recordBtn">
-                        <img src="{{ url_for('static', filename='assets/record_button.png') }}" alt="Button 2">
+                        <img id="recordImg" src="{{ url_for('static', filename='assets/record_button.png') }}" alt="Record">
                     </button>
                 </div>
             </div>
@@ -55,6 +55,11 @@
 
 </body>
 <script>
+    const recordBtn = document.getElementById("recordBtn");
+    const recordImg = document.getElementById("recordImg");
+
+    let recording = false; 
+
     document.getElementById("recordBtn").addEventListener("click", () => {
         fetch("/record")
         .then(response => response.json())
@@ -62,6 +67,15 @@
             console.log("Recording status:", data.recording);
         })
         .catch(err => console.error(err));
+
+        recording = !recording; // toggle
+        if (recording) {
+            recordImg.src = "{{ url_for('static', filename='assets/stop_record_button.png') }}";
+            recordImg.alt = "Stop";
+        } else {
+            recordImg.src = "{{ url_for('static', filename='assets/record_button.png') }}";
+            recordImg.alt = "Record";
+        }
     });
 
         document.getElementById("screenshotBtn").addEventListener("click", () => {

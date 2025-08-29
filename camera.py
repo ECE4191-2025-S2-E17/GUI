@@ -80,6 +80,7 @@ class VideoCamera:
 
     def get_frame(self):
         if not self.video or not self.video.isOpened():
+            print("Disconnected")
             self.reconnect()
 
         success, image = self.video.read()
