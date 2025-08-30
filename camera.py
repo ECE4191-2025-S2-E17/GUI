@@ -3,12 +3,15 @@ import time
 import os
 import threading
 from queue import Queue
+from ultralytics import YOLO
 
 os.makedirs("recordings", exist_ok=True)
 
 class VideoCamera:
     def __init__(self, source=0):
         self.source = source
+        # Initialise model
+        self.model = YOLO("best.pt")
         self.video = self.connect()
         self.recording = False
         self.out = None
@@ -18,8 +21,12 @@ class VideoCamera:
         self.record_thread = None
         self.stop_record_flag = False
 
+
+
     def connect(self):
+        print("here1")
         cap = cv2.VideoCapture(self.source)
+        print("here2")
         if not cap.isOpened():
             print("Could not connect")
         else:
@@ -79,14 +86,19 @@ class VideoCamera:
                 continue
 
     def get_frame(self):
+        print("here3")
         if not self.video or not self.video.isOpened():
             print("Disconnected")
             self.reconnect()
-
+        print("here4")
         success, image = self.video.read()
+        print("here5")
         if not success:
             self.reconnect()
-            return b''
+            success, image = self.video.read()
+            if not success:
+                return b''
+
 
         # Queue frame for recording
         if self.recording and self.out:
@@ -95,4 +107,11 @@ class VideoCamera:
 
         # Encode JPEG for live streaming
         _, jpeg = cv2.imencode('.jpg', image)
+
+        results = self.model(image)
+
+        img = results[0].plot()
+
+        _, jpeg = cv2.imencode('.jpg', img)
+
         return jpeg.tobytes()

@@ -7,9 +7,11 @@ import io
 
 
 
-IP_URL = "rtsp://118.139.90.171"
+#IP_URL = "rtsp://118.139.90.171"
 #IP_URL = "rtsp://10.0.0.211"
-# IP_URL = "http://10.181.5.98/stream" 
+# IP_URL = "http://# 
+IP_URL = "http://10.92.204.98/stream"
+IP_URL = "http://192.168.0.102/stream"
 #IP_URL = 0
 
 app = Flask(__name__)
@@ -57,4 +59,4 @@ def toggle_recording():
 
 if __name__ == '__main__':
     #app.run(host='0.0.0.0', port=5000, threaded=True)
-    app.run(debug=True)
+    app.run(debug=True, use_reloader=False)
