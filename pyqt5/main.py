@@ -5,36 +5,58 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsDropShadowEffect
 from PyQt5.QtGui import QImage, QPixmap, QColor, QKeySequence
 from PyQt5.QtCore import QTimer, pyqtSignal, QThread, Qt
 from ui_main import Ui_MainWindow 
+import requests
 
-# IP_URL = "rtsp://10.0.0.211"  # Commented out for now
+# IP_URL = "http://127.0.0.1:8080"  # Local host for now
 LAPTOP_CAMERA = 0  # Use laptop camera (index 0)
 
 
 class RobotController:
     """Handles communication with the robot platform"""
     
-    def __init__(self):
+    def __init__(self, IP_URL = "http://127.0.0.1:8080"):
         self.connected = False
         self.packets_sent = 0
         self.packets_received = 0
         self.last_command_time = 0
+        self.source = IP_URL
         
     def send_drive_command(self, direction, speed):
         """Send drive command to robot"""
         self.packets_sent += 1
         self.last_command_time = time.time()
-        # TODO: Implement actual robot communication
+        try:
+            url = f"{self.source}/drive?dir={direction}&speed={speed}"
+            r = requests.get(url, timeout=0.7)
+            if r.status_code == 200:
+                self.packets_sent += 1
+                self.last_command_time = time.time()
+            else:
+                print("Command sent:", r.text)
+        except Exception as e:
+            print("Drive Command failed:", e)
+
         print(f"Drive Command: {direction} at {speed}% speed")
         
     def send_gimbal_command(self, pan, tilt):
         """Send gimbal control command"""
-        self.packets_sent += 1
-        # TODO: Implement actual gimbal communication
+        try:
+            url = f"{self.source}/gimbal?pan={pan}&tilt={tilt}"
+            r = requests.get(url, timeout=0.7)
+            self.packets_sent += 1
+        except Exception as e:
+            print("Gimbal Command failed:", e)
         print(f"Gimbal Command: Pan {pan}, Tilt {tilt}")
         
     def emergency_stop(self):
         """Send emergency stop command"""
-        self.packets_sent += 1
+        try:
+            url = f"{self.source}/stop"
+            requests.get(url, timeout=0.7)
+            self.packets_sent += 1
+            print("EMERGENCY STOP sent to ESP32!")
+        except Exception as e:
+            print("STOP failed:", e)
         print("EMERGENCY STOP ACTIVATED!")
         
     def get_telemetry(self):
