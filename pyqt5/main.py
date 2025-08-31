@@ -7,14 +7,14 @@ from PyQt5.QtCore import QTimer, pyqtSignal, QThread, Qt
 from ui_main import Ui_MainWindow 
 import requests
 
-# IP_URL = "http://127.0.0.1:8080"  # Local host for now
-LAPTOP_CAMERA = 0  # Use laptop camera (index 0)
+# LAPTOP_CAMERA = 0  # Use laptop camera (index 0)
+IP_URL = ""  # Replace with local host ESP32-CAM url 
 
 
 class RobotController:
     """Handles communication with the robot platform"""
     
-    def __init__(self, IP_URL = "http://127.0.0.1:8080"):
+    def __init__(self, IP_URL = IP_URL):
         self.connected = False
         self.packets_sent = 0
         self.packets_received = 0
@@ -113,8 +113,8 @@ class MainWindow(QMainWindow):
         self.detection_processor.start()
 
         # Video feed setup
-        self.video_feed = cv2.VideoCapture(LAPTOP_CAMERA)  # Use laptop camera
-        # self.video_feed = cv2.VideoCapture(IP_URL)  # Switch to this for IP camera later
+        # self.video_feed = cv2.VideoCapture(LAPTOP_CAMERA)  # Use laptop camera
+        self.video_feed = cv2.VideoCapture(f"{IP_URL}/stream")  # Switch to this for IP camera later
 
         # Set up shadow effect for the video display
         shadow = QGraphicsDropShadowEffect()
@@ -135,6 +135,12 @@ class MainWindow(QMainWindow):
         self.telemetry_timer.timeout.connect(self.update_telemetry)
         self.telemetry_timer.start(500)  # Update every 500ms
 
+
+        # Resend drive/gimbal commands every 50 ms
+        self.command_timer = QTimer()
+        self.command_timer.timeout.connect(self.send_continuous_command)
+        self.command_timer.start(150)
+
         # Initialize UI state
         self.current_speed = 50
         self.update_connection_status()
@@ -147,7 +153,7 @@ class MainWindow(QMainWindow):
         self.setFocusPolicy(Qt.StrongFocus)
         
         # Track key press states for continuous movement
-        self.pressed_keys = set()
+        self.command_key = None
         
         # Make sure window appears on top
         self.setWindowFlags(self.windowFlags() | Qt.WindowStaysOnTopHint)
@@ -205,6 +211,27 @@ class MainWindow(QMainWindow):
         """Update drive speed"""
         self.current_speed = value
         self.ui.speedValueLabel.setText(f"{value}%")
+
+    def send_continuous_command(self):
+        """Called by QTimer to send commands while a key is held. Only one key can be held at a time."""
+        # Drive commands
+        if self.command_key == Qt.Key_W:
+            self.drive_command("forward")
+        elif self.command_key == Qt.Key_A:
+            self.drive_command("left")
+        elif self.command_key == Qt.Key_S:
+            self.drive_command("backward")
+        elif self.command_key == Qt.Key_D:
+            self.drive_command("right")
+        # Gimbal commands
+        elif self.command_key == Qt.Key_Left:
+            self.gimbal_command("pan_left")
+        elif self.command_key == Qt.Key_Right:
+            self.gimbal_command("pan_right")
+        elif self.command_key == Qt.Key_Up:
+            self.gimbal_command("tilt_up")
+        elif self.command_key == Qt.Key_Down:
+            self.gimbal_command("tilt_down")
 
     def add_detection(self, detection_text):
         """Add detection result to the list"""
@@ -283,74 +310,57 @@ class MainWindow(QMainWindow):
 
     def keyPressEvent(self, event):
         """Handle keyboard input for drive and gimbal controls"""
+        if event.isAutoRepeat():
+            return
+
         key = event.key()
-        
-        # Add key to pressed keys set
-        self.pressed_keys.add(key)
-        
-        # WASD for drive controls
-        if key == Qt.Key_W:
-            self.drive_command("forward")
-            self.highlight_button(self.ui.forwardBtn, True)
-        elif key == Qt.Key_A:
-            self.drive_command("left")
-            self.highlight_button(self.ui.leftBtn, True)
-        elif key == Qt.Key_S:
-            self.drive_command("backward")
-            self.highlight_button(self.ui.backwardBtn, True)
-        elif key == Qt.Key_D:
-            self.drive_command("right")
-            self.highlight_button(self.ui.rightBtn, True)
-        
-        # Arrow keys for gimbal controls
-        elif key == Qt.Key_Left:
-            self.gimbal_command("pan_left")
-            self.highlight_button(self.ui.panLeftBtn, True)
-        elif key == Qt.Key_Right:
-            self.gimbal_command("pan_right")
-            self.highlight_button(self.ui.panRightBtn, True)
-        elif key == Qt.Key_Up:
-            self.gimbal_command("tilt_up")
-            self.highlight_button(self.ui.tiltUpBtn, True)
-        elif key == Qt.Key_Down:
-            self.gimbal_command("tilt_down")
-            self.highlight_button(self.ui.tiltDownBtn, True)
+
+        # WASD for drive controls, Arrow keys for gimbal
+        if key in [Qt.Key_W, Qt.Key_A, Qt.Key_S, Qt.Key_D, Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down]:
+            if self.command_key is None: # Only set if no other drive key is active
+                self.command_key = key
+                self.highlight_button_for_key(key, True)
         
         # Space for emergency stop
         elif key == Qt.Key_Space:
-            self.emergency_stop()
-            self.highlight_button(self.ui.emergencyStopBtn, True)
+            self.highlight_button(self, key, True)
+            self.emergency_stop(self.ui.emergencyStopBtn, True)
         
         super().keyPressEvent(event)
 
-    def keyReleaseEvent(self, event):
-        """Handle key release to stop continuous movement"""
+    def keyReleaseEvent(self, event):       
+        """Handle key release"""
+        if event.isAutoRepeat():
+            return
+
         key = event.key()
-        
-        # Remove key from pressed keys set
-        self.pressed_keys.discard(key)
-        
-        # Stop drive movement when keys are released
-        if key in [Qt.Key_W, Qt.Key_A, Qt.Key_S, Qt.Key_D]:
-            self.drive_command("stop")
-            
-            # Remove highlight from all drive buttons
-            self.highlight_button(self.ui.forwardBtn, False)
-            self.highlight_button(self.ui.leftBtn, False)
-            self.highlight_button(self.ui.backwardBtn, False)
-            self.highlight_button(self.ui.rightBtn, False)
-        
-        # Remove highlight from gimbal buttons
-        elif key in [Qt.Key_Left, Qt.Key_Right, Qt.Key_Up, Qt.Key_Down]:
-            self.highlight_button(self.ui.panLeftBtn, False)
-            self.highlight_button(self.ui.panRightBtn, False)
-            self.highlight_button(self.ui.tiltUpBtn, False)
-            self.highlight_button(self.ui.tiltDownBtn, False)
-        
+
+        if key == self.command_key:
+            self.command_key = None
+            self.highlight_button_for_key(key, False)
+
         elif key == Qt.Key_Space:
             self.highlight_button(self.ui.emergencyStopBtn, False)
-        
+
         super().keyReleaseEvent(event)
+
+    def highlight_button_for_key(self, key, pressed):
+        """Map keys to buttons for highlighting"""
+        mapping = {
+            Qt.Key_W: self.ui.forwardBtn,
+            Qt.Key_A: self.ui.leftBtn,
+            Qt.Key_S: self.ui.backwardBtn,
+            Qt.Key_D: self.ui.rightBtn,
+            Qt.Key_Left: self.ui.panLeftBtn,
+            Qt.Key_Right: self.ui.panRightBtn,
+            Qt.Key_Up: self.ui.tiltUpBtn,
+            Qt.Key_Down: self.ui.tiltDownBtn,
+            Qt.Key_Space: self.ui.emergencyStopBtn
+        }
+        btn = mapping.get(key)
+        if btn:
+            self.highlight_button(btn, pressed)
+
 
     def highlight_button(self, button, pressed):
         """Highlight button when key is pressed using CSS classes"""
