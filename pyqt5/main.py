@@ -7,8 +7,9 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsDropShadowEffect
 from PyQt5.QtGui import QImage, QPixmap, QColor, QKeySequence
 from PyQt5.QtCore import QTimer, pyqtSignal, QThread, Qt
 from ui_main import Ui_MainWindow 
+import requests
 
-# IP_URL = "rtsp://10.0.0.211"  # Commented out for now
+# IP_URL = "http://127.0.0.1:8080"  # Local host for now
 LAPTOP_CAMERA = 0  # Use laptop camera (index 0)
 
 # ===== ESP32 CONFIGURATION =====
@@ -22,7 +23,7 @@ ESP32_BASE_URL = f"http://{ESP32_IP}:{ESP32_PORT}"
 class RobotController:
     """Handles communication with the ESP32-based robot platform"""
     
-    def __init__(self):
+    def __init__(self, IP_URL = "http://127.0.0.1:8080"):
         self.connected = False
         self.packets_sent = 0
         self.packets_received = 0
