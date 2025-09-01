@@ -1,0 +1,25 @@
+{
+    "configurations": [
+        {
+            "name": "ESP32",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "C:/Users/${env:USERNAME}/AppData/Local/Arduino15/packages/esp32/hardware/esp32/*/cores/esp32/**",
+                "C:/Users/${env:USERNAME}/AppData/Local/Arduino15/packages/esp32/hardware/esp32/*/libraries/**",
+                "C:/Users/${env:USERNAME}/Documents/Arduino/libraries/**",
+                "C:/Program Files (x86)/Arduino/libraries/**"
+            ],
+            "defines": [
+                "ARDUINO=10819",
+                "ESP32",
+                "CORE_DEBUG_LEVEL=0",
+                "ARDUINO_ARCH_ESP32"
+            ],
+            "compilerPath": "C:/Users/${env:USERNAME}/AppData/Local/Arduino15/packages/esp32/tools/xtensa-esp32-elf-gcc/*/bin/xtensa-esp32-elf-gcc.exe",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "gcc-x64"
+        }
+    ],
+    "version": 4
+}

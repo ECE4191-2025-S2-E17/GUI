@@ -1,6 +1,8 @@
 import sys
 import cv2
 import time
+import requests
+import json
 from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsDropShadowEffect
 from PyQt5.QtGui import QImage, QPixmap, QColor, QKeySequence
 from PyQt5.QtCore import QTimer, pyqtSignal, QThread, Qt
@@ -9,43 +11,182 @@ from ui_main import Ui_MainWindow
 # IP_URL = "rtsp://10.0.0.211"  # Commented out for now
 LAPTOP_CAMERA = 0  # Use laptop camera (index 0)
 
+# ===== ESP32 CONFIGURATION =====
+# Change these settings to match your ESP32 setup
+ESP32_IP = "192.168.1.100"  # CHANGE THIS to ESP32's IP address
+ESP32_PORT = 80
+ESP32_BASE_URL = f"http://{ESP32_IP}:{ESP32_PORT}"
+# ===============================
+
 
 class RobotController:
-    """Handles communication with the robot platform"""
+    """Handles communication with the ESP32-based robot platform"""
     
     def __init__(self):
         self.connected = False
         self.packets_sent = 0
         self.packets_received = 0
         self.last_command_time = 0
+        self.esp32_timeout = 2  # seconds
+        
+        # Test ESP32 connection on startup
+        self.test_connection()
+        
+    def test_connection(self):
+        """Test connection to ESP32"""
+        try:
+            response = requests.get(f"{ESP32_BASE_URL}/status", timeout=self.esp32_timeout)
+            if response.status_code == 200:
+                self.connected = True
+                print("✅ ESP32 connection established")
+            else:
+                self.connected = False
+                print("❌ ESP32 responded but with error status")
+        except requests.exceptions.RequestException as e:
+            self.connected = False
+            print(f"❌ Failed to connect to ESP32: {e}")
+    
+    def send_wheel_command(self, left_wheel_direction, left_wheel_speed, right_wheel_direction, right_wheel_speed):
+        """Send individual wheel commands to ESP32"""
+        try:
+            # Prepare wheel command data
+            command_data = {
+                "left_wheel": {
+                    "direction": left_wheel_direction,  # "forward", "backward", "stop"
+                    "speed": left_wheel_speed  # 0-100
+                },
+                "right_wheel": {
+                    "direction": right_wheel_direction,  # "forward", "backward", "stop"
+                    "speed": right_wheel_speed  # 0-100
+                }
+            }
+            
+            # Send command to ESP32
+            response = requests.post(
+                f"{ESP32_BASE_URL}/drive", 
+                json=command_data, 
+                timeout=self.esp32_timeout
+            )
+            
+            if response.status_code == 200:
+                self.packets_sent += 1
+                self.last_command_time = time.time()
+                print(f"🤖 Wheel Command: L({left_wheel_direction},{left_wheel_speed}%) R({right_wheel_direction},{right_wheel_speed}%)")
+                return True
+            else:
+                print(f"❌ ESP32 command failed: HTTP {response.status_code}")
+                return False
+                
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Failed to send command to ESP32: {e}")
+            self.connected = False
+            return False
         
     def send_drive_command(self, direction, speed):
-        """Send drive command to robot"""
-        self.packets_sent += 1
-        self.last_command_time = time.time()
-        # TODO: Implement actual robot communication
-        print(f"Drive Command: {direction} at {speed}% speed")
+        """Send drive command to robot with proper wheel mapping"""
+        print(f"🎮 Drive Command: {direction} at {speed}% speed")
+        
+        # Map drive commands to individual wheel controls
+        if direction == "forward":
+            # Both wheels forward
+            self.send_wheel_command("forward", speed, "forward", speed)
+            
+        elif direction == "backward":
+            # Both wheels backward
+            self.send_wheel_command("backward", speed, "backward", speed)
+            
+        elif direction == "left":
+            # Turn left: right wheel forward, left wheel backward
+            self.send_wheel_command("backward", speed, "forward", speed)
+            
+        elif direction == "right":
+            # Turn right: left wheel forward, right wheel backward
+            self.send_wheel_command("forward", speed, "backward", speed)
+            
+        elif direction == "stop":
+            # Stop both wheels
+            self.send_wheel_command("stop", 0, "stop", 0)
+        
+        else:
+            print(f"⚠️ Unknown drive command: {direction}")
         
     def send_gimbal_command(self, pan, tilt):
-        """Send gimbal control command"""
-        self.packets_sent += 1
-        # TODO: Implement actual gimbal communication
-        print(f"Gimbal Command: Pan {pan}, Tilt {tilt}")
+        """Send gimbal control command to ESP32"""
+        try:
+            command_data = {
+                "pan": pan,    # -100 to 100 (left to right)
+                "tilt": tilt   # -100 to 100 (down to up)
+            }
+            
+            response = requests.post(
+                f"{ESP32_BASE_URL}/gimbal", 
+                json=command_data, 
+                timeout=self.esp32_timeout
+            )
+            
+            if response.status_code == 200:
+                self.packets_sent += 1
+                print(f"📹 Gimbal Command: Pan {pan}, Tilt {tilt}")
+                return True
+            else:
+                print(f"❌ Gimbal command failed: HTTP {response.status_code}")
+                return False
+                
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Failed to send gimbal command: {e}")
+            return False
         
     def emergency_stop(self):
-        """Send emergency stop command"""
-        self.packets_sent += 1
-        print("EMERGENCY STOP ACTIVATED!")
+        """Send emergency stop command to ESP32"""
+        try:
+            response = requests.post(
+                f"{ESP32_BASE_URL}/emergency_stop", 
+                timeout=self.esp32_timeout
+            )
+            
+            if response.status_code == 200:
+                self.packets_sent += 1
+                print("🚨 EMERGENCY STOP ACTIVATED!")
+                return True
+            else:
+                print(f"❌ Emergency stop failed: HTTP {response.status_code}")
+                return False
+                
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Failed to send emergency stop: {e}")
+            return False
         
     def get_telemetry(self):
-        """Get robot telemetry data"""
-        # TODO: Implement actual telemetry retrieval
+        """Get robot telemetry data from ESP32"""
+        try:
+            response = requests.get(f"{ESP32_BASE_URL}/telemetry", timeout=self.esp32_timeout)
+            
+            if response.status_code == 200:
+                self.packets_received += 1
+                telemetry_data = response.json()
+                
+                # Return telemetry with fallback values
+                return {
+                    'battery_level': telemetry_data.get('battery_level', 0),
+                    'left_motor_rpm': telemetry_data.get('left_motor_rpm', 0),
+                    'right_motor_rpm': telemetry_data.get('right_motor_rpm', 0),
+                    'suspension_height': telemetry_data.get('suspension_height', 0.0),
+                    'latency': telemetry_data.get('latency', 0)
+                }
+            else:
+                print(f"❌ Telemetry request failed: HTTP {response.status_code}")
+                
+        except requests.exceptions.RequestException as e:
+            print(f"❌ Failed to get telemetry: {e}")
+            self.connected = False
+            
+        # Return fallback telemetry data if ESP32 is not responding
         return {
-            'battery_level': 75,
-            'left_motor_rpm': 150,
-            'right_motor_rpm': 148,
-            'suspension_height': 15.2,
-            'latency': 45
+            'battery_level': 0,
+            'left_motor_rpm': 0,
+            'right_motor_rpm': 0,
+            'suspension_height': 0.0,
+            'latency': 999
         }
 
 
@@ -112,6 +253,11 @@ class MainWindow(QMainWindow):
         self.telemetry_timer = QTimer()
         self.telemetry_timer.timeout.connect(self.update_telemetry)
         self.telemetry_timer.start(500)  # Update every 500ms
+
+        # Connection check timer
+        self.connection_timer = QTimer()
+        self.connection_timer.timeout.connect(self.check_esp32_connection)
+        self.connection_timer.start(5000)  # Check connection every 5 seconds
 
         # Initialize UI state
         self.current_speed = 50
@@ -238,15 +384,20 @@ class MainWindow(QMainWindow):
         self.ui.packetsReceivedLabel.setText(f"Packets Received: {self.robot_controller.packets_received}")
         self.ui.latencyLabel.setText(f"Latency: {telemetry['latency']} ms")
 
+    def check_esp32_connection(self):
+        """Periodically check ESP32 connection status"""
+        self.robot_controller.test_connection()
+        self.update_connection_status()
+
     def update_connection_status(self):
-        """Update connection status display"""
+        """Update connection status display with ESP32 information"""
         if self.robot_controller.connected:
-            self.ui.connectionStatus.setText("Status: Connected")
+            self.ui.connectionStatus.setText(f"Status: Connected to ESP32 ({ESP32_IP})")
             self.ui.connectionStatus.setStyleSheet("color: #4CAF50;")
             self.ui.robotConnectionLabel.setText("Robot Connection: Online")
             self.ui.robotConnectionLabel.setStyleSheet("color: #4CAF50;")
         else:
-            self.ui.connectionStatus.setText("Status: Disconnected")
+            self.ui.connectionStatus.setText(f"Status: Disconnected from ESP32 ({ESP32_IP})")
             self.ui.connectionStatus.setStyleSheet("color: #F44336;")
             self.ui.robotConnectionLabel.setText("Robot Connection: Offline")
             self.ui.robotConnectionLabel.setStyleSheet("color: #F44336;")
