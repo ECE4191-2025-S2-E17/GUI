@@ -3,85 +3,494 @@ import cv2
 import time
 import requests
 import json
+import numpy as np
 from PyQt5.QtWidgets import QApplication, QMainWindow, QGraphicsDropShadowEffect
 from PyQt5.QtGui import QImage, QPixmap, QColor, QKeySequence
 from PyQt5.QtCore import QTimer, pyqtSignal, QThread, Qt
 from ui_main import Ui_MainWindow 
 import requests
 
-# IP_URL = "http://127.0.0.1:8080"  # Local host for now
-LAPTOP_CAMERA = 0  # Use laptop camera (index 0)
+# ===== CAMERA CONFIGURATION =====
+# Choose camera source: "esp32", "ip_camera", or "local"
+CAMERA_SOURCE = "esp32"  # Changed to use ESP32 since it's working
 
-# ===== ESP32 CONFIGURATION =====
-# Change these settings to match your ESP32 setup
-ESP32_IP = "192.168.1.100"  # CHANGE THIS to ESP32's IP address
+# ESP32-CAM Configuration
+ESP32_IP = "192.168.5.129"  # ESP32's actual IP address
 ESP32_PORT = 80
+ESP32_CAMERA_URL = f"http://{ESP32_IP}/stream"
 ESP32_BASE_URL = f"http://{ESP32_IP}:{ESP32_PORT}"
-# ===============================
+
+# Alternative ESP32 IP addresses to try (in case DHCP assigned different IP)
+ESP32_FALLBACK_IPS = [
+    "192.168.5.129", # Current ESP32 IP
+    "192.168.4.1",   # Default ESP32 AP mode IP  
+    "192.168.1.1",   # Common ESP32 AP mode IP
+    "192.168.1.100", # Common router-assigned IP range
+    "192.168.1.101",
+    "192.168.1.102",
+    "192.168.0.100", # Another common router IP range
+    "192.168.0.101",
+    "192.168.0.102"
+]
+
+# IP Camera Configuration 
+IP_CAMERA_URL = f"http://{ESP32_IP}/stream"  # Use ESP32 stream for now
+# Common IP camera URL formats:
+# "http://192.168.1.100:8080/video_feed"  # Phone camera apps  
+# "http://192.168.1.100/mjpg/video.mjpg"  # MJPEG cameras
+# "rtsp://192.168.1.100:554/stream"       # RTSP cameras
+# ===================================
+
+
+class IPCamera:
+    """Handles IP camera streams with multiple format support"""
+    
+    def __init__(self, stream_url):
+        self.stream_url = stream_url
+        self.video = None
+        self.connected = False
+        self.session = requests.Session()
+        self.session.timeout = 5
+        self.last_frame = None
+        
+        # Try to connect using OpenCV first (works well for RTSP and some HTTP streams)
+        self.connect_opencv()
+        
+        # If OpenCV fails, we'll fall back to HTTP requests method
+        if not self.connected:
+            self.connect_http()
+    
+    def connect_opencv(self):
+        """Try to connect using OpenCV VideoCapture (good for RTSP, some HTTP)"""
+        try:
+            # Set OpenCV environment variables for better HTTP/RTSP support
+            import os
+            os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;tcp|stimeout;5000000"
+            
+            self.video = cv2.VideoCapture(self.stream_url)
+            if self.video.isOpened():
+                # Test if we can actually read a frame
+                ret, frame = self.video.read()
+                if ret and frame is not None:
+                    self.connected = True
+                    self.last_frame = frame
+                    print(f"✅ Connected to IP camera via OpenCV: {self.stream_url}")
+                    return
+                else:
+                    self.video.release()
+                    self.video = None
+        except Exception as e:
+            print(f"OpenCV connection failed: {e}")
+            if self.video:
+                self.video.release()
+                self.video = None
+    
+    def connect_http(self):
+        """Try to connect using HTTP requests (good for MJPEG streams)"""
+        try:
+            # Test HTTP connection
+            response = self.session.get(self.stream_url, timeout=3, stream=True)
+            if response.status_code == 200:
+                print(f"✅ Connected to IP camera via HTTP: {self.stream_url}")
+                self.connected = True
+            else:
+                print(f"❌ HTTP connection failed: {response.status_code}")
+        except Exception as e:
+            print(f"❌ HTTP connection failed: {e}")
+    
+    def get_frame(self):
+        """Get frame from IP camera"""
+        # Try OpenCV method first
+        if self.video and self.video.isOpened():
+            ret, frame = self.video.read()
+            if ret and frame is not None:
+                self.connected = True
+                self.last_frame = frame
+                return frame
+            else:
+                # OpenCV failed, try to reconnect
+                self.video.release()
+                self.video = None
+                self.connect_opencv()
+        
+        # Try HTTP method for MJPEG streams
+        if not self.video:
+            try:
+                response = self.session.get(self.stream_url, timeout=2, stream=True)
+                if response.status_code == 200:
+                    # For MJPEG streams, we need to parse the multipart response
+                    content_type = response.headers.get('content-type', '')
+                    if 'multipart' in content_type:
+                        # This is a basic MJPEG parser - might need adjustment for specific cameras
+                        boundary = content_type.split('boundary=')[-1]
+                        for chunk in response.iter_content(chunk_size=1024):
+                            if b'\xff\xd8' in chunk and b'\xff\xd9' in chunk:
+                                # Found JPEG start and end markers
+                                start = chunk.find(b'\xff\xd8')
+                                end = chunk.find(b'\xff\xd9', start) + 2
+                                if start != -1 and end != -1:
+                                    jpeg_data = chunk[start:end]
+                                    frame = cv2.imdecode(np.frombuffer(jpeg_data, np.uint8), cv2.IMREAD_COLOR)
+                                    if frame is not None:
+                                        self.connected = True
+                                        self.last_frame = frame
+                                        return frame
+                                break
+                    else:
+                        # Try to decode as single image
+                        img_array = np.frombuffer(response.content[:50000], np.uint8)  # Limit size
+                        frame = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+                        if frame is not None:
+                            self.connected = True
+                            self.last_frame = frame
+                            return frame
+            except Exception as e:
+                print(f"HTTP frame capture error: {e}")
+                self.connected = False
+        
+        # Return last known frame if available
+        return self.last_frame
+    
+    def isOpened(self):
+        """Check if camera connection is available"""
+        return self.connected
+    
+    def release(self):
+        """Clean up camera resources"""
+        if self.video:
+            self.video.release()
+        self.session.close()
+
+
+class ESP32Camera:
+    """Handles ESP32-CAM stream using the webserver.ino endpoints"""
+    
+    def __init__(self, stream_url=None):
+        self.stream_url = stream_url or ESP32_CAMERA_URL
+        self.session = requests.Session()
+        self.session.timeout = 3
+        self.connected = False
+        self.last_frame = None
+        self.video_capture = None
+        self.esp32_ip = ESP32_IP
+        self.esp32_base_url = ESP32_BASE_URL
+        
+        # Find and connect to ESP32
+        self.find_and_connect()
+        
+    def find_and_connect(self):
+        """Try to find ESP32 on network and establish connection"""
+        print("🔍 Searching for ESP32-CAM...")
+        
+        # Try the configured IP first
+        if self.test_esp32_connection(self.esp32_ip):
+            self.setup_connection(self.esp32_ip)
+            return
+            
+        # If configured IP fails, try fallback IPs
+        print(f"❌ ESP32 not found at {self.esp32_ip}, trying fallback IPs...")
+        for fallback_ip in ESP32_FALLBACK_IPS:
+            if fallback_ip != self.esp32_ip:  # Skip if same as configured IP
+                if self.test_esp32_connection(fallback_ip):
+                    print(f"✅ ESP32 found at {fallback_ip}")
+                    self.setup_connection(fallback_ip)
+                    return
+                    
+        print("❌ ESP32-CAM not found on any attempted IP addresses")
+        
+    def test_esp32_connection(self, ip):
+        """Test if ESP32 is accessible at given IP"""
+        try:
+            test_url = f"http://{ip}/"
+            response = self.session.get(test_url, timeout=2)
+            # ESP32 webserver returns webpage content on root path
+            if response.status_code == 200 and len(response.text) > 100:
+                return True
+        except:
+            pass
+        return False
+        
+    def setup_connection(self, ip):
+        """Setup connection to ESP32 at given IP"""
+        self.esp32_ip = ip
+        self.esp32_base_url = f"http://{ip}:80"
+        self.stream_url = f"http://{ip}/stream"
+        
+        # Try to connect using OpenCV first (often works well with MJPEG streams)
+        self.try_opencv_connection()
+        
+    def try_opencv_connection(self):
+        """Try to connect using OpenCV VideoCapture for MJPEG stream with optimizations"""
+        try:
+            print(f"🎥 Connecting to ESP32 stream: {self.stream_url}")
+            self.video_capture = cv2.VideoCapture(self.stream_url)
+            
+            if self.video_capture.isOpened():
+                # Optimize OpenCV settings for better performance
+                self.video_capture.set(cv2.CAP_PROP_BUFFERSIZE, 1)  # Reduce buffer to minimize latency
+                self.video_capture.set(cv2.CAP_PROP_FPS, 30)  # Set target FPS
+                
+                # Test if we can read a frame
+                ret, frame = self.video_capture.read()
+                if ret and frame is not None:
+                    self.connected = True
+                    self.last_frame = frame
+                    print("✅ ESP32-CAM stream connected via OpenCV with optimizations")
+                    return True
+                else:
+                    self.video_capture.release()
+                    self.video_capture = None
+                    
+        except Exception as e:
+            print(f"OpenCV connection failed: {e}")
+            if self.video_capture:
+                self.video_capture.release()
+                self.video_capture = None
+        
+        return False
+        
+    def get_frame(self):
+        """Get a single frame from ESP32-CAM stream with optimized performance"""
+        # Try OpenCV method first (continuous MJPEG stream) - most efficient
+        if self.video_capture and self.video_capture.isOpened():
+            ret, frame = self.video_capture.read()
+            if ret and frame is not None:
+                self.connected = True
+                self.last_frame = frame
+                return frame
+            else:
+                # OpenCV failed, try to reconnect
+                print("📹 OpenCV stream interrupted, attempting reconnect...")
+                self.video_capture.release()
+                self.video_capture = None
+                if self.try_opencv_connection():
+                    ret, frame = self.video_capture.read()
+                    if ret and frame is not None:
+                        return frame
+        
+        # Fallback: Try to parse MJPEG stream manually (less efficient but more reliable)
+        try:
+            response = self.session.get(self.stream_url, timeout=1, stream=True)  # Reduced timeout for faster response
+            if response.status_code == 200:
+                # Read and parse MJPEG stream more efficiently
+                buffer = b""
+                max_frame_size = 100000  # Limit frame size for performance
+                
+                for chunk in response.iter_content(chunk_size=2048):  # Larger chunks for efficiency
+                    buffer += chunk
+                    
+                    # Look for JPEG frame boundaries
+                    start_marker = buffer.find(b'\xff\xd8')  # JPEG start
+                    if start_marker == -1:
+                        continue
+                        
+                    end_marker = buffer.find(b'\xff\xd9', start_marker)  # JPEG end
+                    
+                    if end_marker != -1:
+                        # Extract complete JPEG frame
+                        jpeg_data = buffer[start_marker:end_marker+2]
+                        
+                        # Decode frame with error handling
+                        try:
+                            frame = cv2.imdecode(np.frombuffer(jpeg_data, np.uint8), cv2.IMREAD_COLOR)
+                            if frame is not None and frame.size > 0:
+                                self.connected = True
+                                self.last_frame = frame
+                                return frame
+                        except Exception as e:
+                            print(f"Frame decode error: {e}")
+                        
+                        # Remove processed frame from buffer
+                        buffer = buffer[end_marker+2:]
+                        
+                    # Prevent buffer from growing too large (performance optimization)
+                    if len(buffer) > max_frame_size:
+                        # Keep only the most recent data
+                        recent_start = max(0, len(buffer) - max_frame_size//2)
+                        buffer = buffer[recent_start:]
+                        
+                    # Quick exit after finding first valid frame
+                    if len(jpeg_data) > 1000:  # Reasonable frame size check
+                        break
+                        
+        except Exception as e:
+            print(f"ESP32 stream error: {e}")
+            self.connected = False
+            
+        # Return last known frame if available (maintains smoother video during brief interruptions)
+        if self.last_frame is not None:
+            return self.last_frame
+            
+        return None
+    
+    def isOpened(self):
+        """Check if camera connection is available"""
+        return self.connected
+    
+    def release(self):
+        """Clean up camera resources"""
+        if self.video_capture:
+            self.video_capture.release()
+        self.session.close()
+        
+    def get_esp32_ip(self):
+        """Get the current ESP32 IP address"""
+        return self.esp32_ip
+            
+        # Return last known frame if available
+        return self.last_frame
+    
+    def isOpened(self):
+        """Check if camera connection is available"""
+        return self.connected
+    
+    def release(self):
+        """Clean up camera resources"""
+        if self.video_capture:
+            self.video_capture.release()
+        self.session.close()
+
+
+class LocalCamera:
+    """Fallback to local camera if ESP32-CAM is not available"""
+    
+    def __init__(self, source=0):
+        self.video = cv2.VideoCapture(source)
+        self.connected = self.video.isOpened()
+        
+    def get_frame(self):
+        """Get frame from local camera"""
+        if self.video.isOpened():
+            ret, frame = self.video.read()
+            if ret:
+                self.connected = True
+                return frame
+        self.connected = False
+        return None
+        
+    def isOpened(self):
+        return self.connected
+        
+    def release(self):
+        if self.video.isOpened():
+            self.video.release()
 
 
 class RobotController:
     """Handles communication with the ESP32-based robot platform"""
     
-    def __init__(self, IP_URL = "http://127.0.0.1:8080"):
+    def __init__(self):
         self.connected = False
         self.packets_sent = 0
         self.packets_received = 0
         self.last_command_time = 0
-        self.esp32_timeout = 2  # seconds
+        self.esp32_timeout = 3  # seconds
+        self.esp32_ip = ESP32_IP
+        self.esp32_base_url = ESP32_BASE_URL
         
-        # Test ESP32 connection on startup
-        self.test_connection()
+        # Find ESP32 and test connection on startup
+        self.find_and_test_connection()
         
-    def test_connection(self):
-        """Test connection to ESP32"""
+    def find_and_test_connection(self):
+        """Find ESP32 on network and test connection"""
+        print("🔍 Searching for ESP32 robot controller...")
+        
+        # Try the configured IP first
+        if self.test_esp32_connection(self.esp32_ip):
+            self.setup_connection(self.esp32_ip)
+            return
+            
+        # If configured IP fails, try fallback IPs
+        for fallback_ip in ESP32_FALLBACK_IPS:
+            if fallback_ip != self.esp32_ip:
+                if self.test_esp32_connection(fallback_ip):
+                    print(f"✅ ESP32 robot found at {fallback_ip}")
+                    self.setup_connection(fallback_ip)
+                    return
+                    
+        print("❌ ESP32 robot controller not found")
+        
+    def test_esp32_connection(self, ip):
+        """Test if ESP32 is accessible at given IP"""
         try:
-            response = requests.get(f"{ESP32_BASE_URL}/status", timeout=self.esp32_timeout)
+            test_url = f"http://{ip}/"
+            response = requests.get(test_url, timeout=2)
             if response.status_code == 200:
-                self.connected = True
-                print("✅ ESP32 connection established")
-            else:
-                self.connected = False
-                print("❌ ESP32 responded but with error status")
-        except requests.exceptions.RequestException as e:
-            self.connected = False
-            print(f"❌ Failed to connect to ESP32: {e}")
+                return True
+        except:
+            pass
+        return False
+        
+    def setup_connection(self, ip):
+        """Setup connection to ESP32 at given IP"""
+        self.esp32_ip = ip
+        self.esp32_base_url = f"http://{ip}:80"
+        self.connected = True
+        print(f"✅ ESP32 robot controller connected at {ip}")
     
     def send_wheel_command(self, left_wheel_direction, left_wheel_speed, right_wheel_direction, right_wheel_speed):
-        """Send individual wheel commands to ESP32"""
+        """Send individual wheel commands to ESP32 using webserver.ino format"""
         try:
-            # Prepare wheel command data
-            command_data = {
-                "left_wheel": {
-                    "direction": left_wheel_direction,  # "forward", "backward", "stop"
-                    "speed": left_wheel_speed  # 0-100
-                },
-                "right_wheel": {
-                    "direction": right_wheel_direction,  # "forward", "backward", "stop"
-                    "speed": right_wheel_speed  # 0-100
-                }
-            }
+            # Convert direction and speed to the format expected by webserver.ino
+            # webserver.ino expects lw and rw parameters with signed integers
+            # Positive = forward, Negative = backward, 0 = stop
             
-            # Send command to ESP32
-            response = requests.post(
-                f"{ESP32_BASE_URL}/drive", 
-                json=command_data, 
-                timeout=self.esp32_timeout
-            )
+            left_wheel_value = 0
+            right_wheel_value = 0
+            
+            if left_wheel_direction == "forward":
+                left_wheel_value = left_wheel_speed
+            elif left_wheel_direction == "backward":
+                left_wheel_value = -left_wheel_speed
+            else:  # stop
+                left_wheel_value = 0
+                
+            if right_wheel_direction == "forward":
+                right_wheel_value = right_wheel_speed
+            elif right_wheel_direction == "backward":
+                right_wheel_value = -right_wheel_speed
+            else:  # stop
+                right_wheel_value = 0
+            
+            # Send command to ESP32 using GET request with parameters
+            # Format: /drive?lw=<left_wheel>&rw=<right_wheel>
+            drive_url = f"{self.esp32_base_url}/drive?lw={left_wheel_value}&rw={right_wheel_value}"
+            
+            response = requests.get(drive_url, timeout=self.esp32_timeout)
             
             if response.status_code == 200:
                 self.packets_sent += 1
                 self.last_command_time = time.time()
-                print(f"🤖 Wheel Command: L({left_wheel_direction},{left_wheel_speed}%) R({right_wheel_direction},{right_wheel_speed}%)")
+                self.connected = True
+                print(f"🤖 Drive Command: lw={left_wheel_value}, rw={right_wheel_value}")
                 return True
             else:
-                print(f"❌ ESP32 command failed: HTTP {response.status_code}")
+                print(f"❌ ESP32 drive command failed: HTTP {response.status_code}")
                 return False
                 
         except requests.exceptions.RequestException as e:
-            print(f"❌ Failed to send command to ESP32: {e}")
+            print(f"❌ Failed to send drive command to ESP32: {e}")
             self.connected = False
             return False
+    
+    def send_drive_command(self, direction, speed):
+        """Send drive command (both wheels same direction/speed)"""
+        return self.send_wheel_command(direction, speed, direction, speed)
+    
+    def send_turn_command(self, turn_direction, speed):
+        """Send turn command (wheels in opposite directions)"""
+        if turn_direction == "left":
+            # Left turn: left wheel backward, right wheel forward
+            return self.send_wheel_command("backward", speed, "forward", speed)
+        elif turn_direction == "right":
+            # Right turn: left wheel forward, right wheel backward
+            return self.send_wheel_command("forward", speed, "backward", speed)
+        else:
+            return self.send_wheel_command("stop", 0, "stop", 0)
+    
+    def stop_robot(self):
+        """Stop both wheels"""
+        return self.send_wheel_command("stop", 0, "stop", 0)
         
     def send_drive_command(self, direction, speed):
         """Send drive command to robot with proper wheel mapping"""
@@ -227,14 +636,24 @@ class MainWindow(QMainWindow):
         # Initialize robot controller
         self.robot_controller = RobotController()
         
-        # Initialize detection processor
         self.detection_processor = DetectionProcessor()
         self.detection_processor.detection_update.connect(self.add_detection)
         self.detection_processor.start()
 
-        # Video feed setup
-        self.video_feed = cv2.VideoCapture(LAPTOP_CAMERA)  # Use laptop camera
-        # self.video_feed = cv2.VideoCapture(IP_URL)  # Switch to this for IP camera later
+        # Video feed setup - choose camera source based on configuration
+        self.esp32_camera = None
+        self.ip_camera = None
+        self.local_camera = LocalCamera(0)  # Always have local camera as fallback
+        self.current_camera = None
+        
+        # Initialize cameras based on configuration
+        if CAMERA_SOURCE == "ip_camera":
+            self.ip_camera = IPCamera(IP_CAMERA_URL)
+        elif CAMERA_SOURCE == "esp32":
+            self.esp32_camera = ESP32Camera()  # Auto-discovery enabled
+        # local camera is always available as fallback
+        
+        self.setup_camera()
 
         # Set up shadow effect for the video display
         shadow = QGraphicsDropShadowEffect()
@@ -249,11 +668,21 @@ class MainWindow(QMainWindow):
         # Create timers
         self.video_timer = QTimer()
         self.video_timer.timeout.connect(self.update_frame)
-        self.video_timer.start(30)  # 30ms = ~33 fps
+        self.video_timer.start(33)  # 33ms = ~30 fps for smoother, more stable video
+        
+        # Add frame rate tracking
+        self.frame_count = 0
+        self.last_fps_time = time.time()
+        self.current_fps = 0
+        self.target_fps = 30
+        self.frame_skip_counter = 0
+        self.performance_adjustment_timer = QTimer()
+        self.performance_adjustment_timer.timeout.connect(self.adjust_performance)
+        self.performance_adjustment_timer.start(5000)  # Check performance every 5 seconds
 
         self.telemetry_timer = QTimer()
         self.telemetry_timer.timeout.connect(self.update_telemetry)
-        self.telemetry_timer.start(500)  # Update every 500ms
+        self.telemetry_timer.start(250)  # Update every 250ms for more responsive telemetry
 
         # Connection check timer
         self.connection_timer = QTimer()
@@ -279,6 +708,62 @@ class MainWindow(QMainWindow):
         self.show()
         self.raise_()
         self.activateWindow()
+
+    def setup_camera(self):
+        """Setup camera source based on configuration"""
+        print("🎥 Setting up camera...")
+        
+        # Try primary camera source first
+        if CAMERA_SOURCE == "ip_camera" and self.ip_camera:
+            test_frame = self.ip_camera.get_frame()
+            if test_frame is not None:
+                self.current_camera = self.ip_camera
+                print("✅ Using IP Camera")
+                return
+                
+        elif CAMERA_SOURCE == "esp32" and self.esp32_camera:
+            test_frame = self.esp32_camera.get_frame()
+            if test_frame is not None:
+                self.current_camera = self.esp32_camera
+                print("✅ Using ESP32-CAM")
+                return
+                
+        elif CAMERA_SOURCE == "local":
+            test_frame = self.local_camera.get_frame()
+            if test_frame is not None:
+                self.current_camera = self.local_camera
+                print("✅ Using Local Camera")
+                return
+        
+        # Fallback sequence: try other available cameras
+        print(f"❌ Primary camera source '{CAMERA_SOURCE}' failed, trying alternatives...")
+        
+        # Try IP camera if not primary
+        if CAMERA_SOURCE != "ip_camera" and self.ip_camera:
+            test_frame = self.ip_camera.get_frame()
+            if test_frame is not None:
+                self.current_camera = self.ip_camera
+                print("✅ Using IP Camera (fallback)")
+                return
+        
+        # Try ESP32-CAM if not primary  
+        if CAMERA_SOURCE != "esp32" and self.esp32_camera:
+            test_frame = self.esp32_camera.get_frame()
+            if test_frame is not None:
+                self.current_camera = self.esp32_camera
+                print("✅ Using ESP32-CAM (fallback)")
+                return
+                
+        # Try local camera if not primary
+        if CAMERA_SOURCE != "local":
+            test_frame = self.local_camera.get_frame()
+            if test_frame is not None:
+                self.current_camera = self.local_camera
+                print("✅ Using Local Camera (fallback)")
+                return
+            
+        print("❌ No camera available")
+        self.current_camera = None
 
     def setup_controls(self):
         """Connect all control signals"""
@@ -341,31 +826,123 @@ class MainWindow(QMainWindow):
             self.ui.detectionList.takeItem(0)
 
     def update_frame(self):
-        """Update video frame"""
-        ret, frame = self.video_feed.read()
-        if ret:
-            # Update camera connection status
-            if "Offline" in self.ui.cameraConnectionLabel.text():
-                self.ui.cameraConnectionLabel.setText("Camera Feed: Online")
+        """Update video frame with performance optimization"""
+        current_time = time.time()
+        
+        # Calculate FPS
+        self.frame_count += 1
+        if current_time - self.last_fps_time >= 1.0:
+            self.current_fps = self.frame_count / (current_time - self.last_fps_time)
+            self.frame_count = 0
+            self.last_fps_time = current_time
+            
+        # Adaptive frame skipping for performance
+        if self.current_fps < self.target_fps * 0.8:  # If FPS drops below 80% of target
+            self.frame_skip_counter += 1
+            if self.frame_skip_counter < 2:  # Skip every 2nd frame if performance is poor
+                return
+            self.frame_skip_counter = 0
+        
+        if self.current_camera is None:
+            # Try to reconnect cameras
+            self.setup_camera()
+            if self.current_camera is None:
+                self.ui.Video.setText("No Camera Available")
+                self.ui.cameraConnectionLabel.setText("Camera Feed: No Camera")
+                self.ui.cameraConnectionLabel.setStyleSheet("color: #F44336;")
+                return
+        
+        frame = self.current_camera.get_frame()
+        if frame is not None:
+            # Rotate frame 90 degrees anticlockwise
+            frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
+            # Update camera connection status only when needed
+            current_status = self.ui.cameraConnectionLabel.text()
+            if "Offline" in current_status or "No Camera" in current_status:
+                if isinstance(self.current_camera, IPCamera):
+                    camera_type = "IP Camera"
+                elif isinstance(self.current_camera, ESP32Camera):
+                    camera_type = "ESP32-CAM"
+                else:
+                    camera_type = "Local Camera"
+                    
+                self.ui.cameraConnectionLabel.setText(f"Camera Feed: Online ({camera_type}) - {self.current_fps:.1f} FPS")
                 self.ui.cameraConnectionLabel.setStyleSheet("color: #4CAF50;")
+            elif "Online" in current_status and self.frame_count % 30 == 0:  # Update FPS every 30 frames
+                # Extract camera type from existing text
+                if "ESP32-CAM" in current_status:
+                    camera_type = "ESP32-CAM"
+                elif "IP Camera" in current_status:
+                    camera_type = "IP Camera"
+                else:
+                    camera_type = "Local Camera"
+                self.ui.cameraConnectionLabel.setText(f"Camera Feed: Online ({camera_type}) - {self.current_fps:.1f} FPS")
             
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-            h, w, ch = frame.shape
+            # Optimize frame processing
+            # Resize frame if it's too large for better performance
+            height, width = frame.shape[:2]
+            if width > 800 or height > 600:
+                scale_factor = min(800/width, 600/height)
+                new_width = int(width * scale_factor)
+                new_height = int(height * scale_factor)
+                frame = cv2.resize(frame, (new_width, new_height), interpolation=cv2.INTER_LINEAR)
+            
+            # Convert BGR to RGB for Qt display
+            frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            h, w, ch = frame_rgb.shape
             bytes_per_line = ch * w
-            qt_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format_RGB888)
+            qt_image = QImage(frame_rgb.data, w, h, bytes_per_line, QImage.Format_RGB888)
             
-            # Scale image to fit video widget
+            # Scale image to fit video widget with optimized transformation
             pixmap = QPixmap.fromImage(qt_image)
-            scaled_pixmap = pixmap.scaled(self.ui.Video.size(), 
-                                        aspectRatioMode=1,  # Keep aspect ratio
-                                        transformMode=1)    # Smooth transformation
+            video_size = self.ui.Video.size()
+            
+            # Only scale if necessary
+            if pixmap.size() != video_size:
+                scaled_pixmap = pixmap.scaled(video_size, 
+                                            aspectRatioMode=Qt.KeepAspectRatio,  
+                                            transformMode=Qt.FastTransformation)  # Use fast transformation for better performance
+            else:
+                scaled_pixmap = pixmap
             
             self.ui.Video.setPixmap(scaled_pixmap)
         else:
-            # No video available
-            if "Online" in self.ui.cameraConnectionLabel.text():
-                self.ui.cameraConnectionLabel.setText("Camera Feed: Offline")
-                self.ui.cameraConnectionLabel.setStyleSheet("color: #F44336;")
+            # No video available - try to reconnect or switch cameras
+            if isinstance(self.current_camera, IPCamera):
+                # IP camera failed, try other cameras
+                print("📹 IP Camera failed, trying alternatives...")
+                if self.esp32_camera:
+                    test_frame = self.esp32_camera.get_frame()
+                    if test_frame is not None:
+                        self.current_camera = self.esp32_camera
+                        print("✅ Switched to ESP32-CAM")
+                        return
+                        
+                test_frame = self.local_camera.get_frame()
+                if test_frame is not None:
+                    self.current_camera = self.local_camera
+                    print("✅ Switched to local camera")
+                    return
+                    
+            elif isinstance(self.current_camera, ESP32Camera):
+                # ESP32-CAM failed, try other cameras
+                print("📹 ESP32-CAM failed, trying alternatives...")
+                if self.ip_camera:
+                    test_frame = self.ip_camera.get_frame()
+                    if test_frame is not None:
+                        self.current_camera = self.ip_camera
+                        print("✅ Switched to IP camera")
+                        return
+                        
+                test_frame = self.local_camera.get_frame()
+                if test_frame is not None:
+                    self.current_camera = self.local_camera
+                    print("✅ Switched to local camera")
+                    return
+            
+            # Update UI to show camera offline
+            self.ui.cameraConnectionLabel.setText("Camera Feed: Offline")
+            self.ui.cameraConnectionLabel.setStyleSheet("color: #F44336;")
             self.ui.Video.setText("Camera Feed Unavailable")
 
     def update_telemetry(self):
@@ -387,28 +964,61 @@ class MainWindow(QMainWindow):
 
     def check_esp32_connection(self):
         """Periodically check ESP32 connection status"""
-        self.robot_controller.test_connection()
+        if not self.robot_controller.connected:
+            # Try to reconnect
+            self.robot_controller.find_and_test_connection()
         self.update_connection_status()
 
     def update_connection_status(self):
         """Update connection status display with ESP32 information"""
         if self.robot_controller.connected:
-            self.ui.connectionStatus.setText(f"Status: Connected to ESP32 ({ESP32_IP})")
+            esp32_ip = self.robot_controller.esp32_ip
+            self.ui.connectionStatus.setText(f"Status: Connected to ESP32 ({esp32_ip})")
             self.ui.connectionStatus.setStyleSheet("color: #4CAF50;")
             self.ui.robotConnectionLabel.setText("Robot Connection: Online")
             self.ui.robotConnectionLabel.setStyleSheet("color: #4CAF50;")
+            
+            # Update global ESP32 URL if IP changed
+            global ESP32_IP, ESP32_BASE_URL, ESP32_CAMERA_URL
+            if esp32_ip != ESP32_IP:
+                ESP32_IP = esp32_ip
+                ESP32_BASE_URL = f"http://{esp32_ip}:80"
+                ESP32_CAMERA_URL = f"http://{esp32_ip}/stream"
+                print(f"🔄 Updated ESP32 IP to: {esp32_ip}")
         else:
-            self.ui.connectionStatus.setText(f"Status: Disconnected from ESP32 ({ESP32_IP})")
+            self.ui.connectionStatus.setText(f"Status: Searching for ESP32...")
             self.ui.connectionStatus.setStyleSheet("color: #F44336;")
             self.ui.robotConnectionLabel.setText("Robot Connection: Offline")
             self.ui.robotConnectionLabel.setStyleSheet("color: #F44336;")
+
+    def adjust_performance(self):
+        """Dynamically adjust video performance based on current FPS"""
+        if self.current_fps > 0:
+            if self.current_fps < self.target_fps * 0.7:  # If FPS is below 70% of target
+                # Reduce frame rate to improve stability
+                new_interval = int(self.video_timer.interval() * 1.2)  # Increase interval by 20%
+                if new_interval <= 50:  # Don't go below 20 FPS
+                    self.video_timer.setInterval(new_interval)
+                    print(f"📊 Performance: Adjusted frame interval to {new_interval}ms for stability")
+            elif self.current_fps > self.target_fps * 1.1 and self.video_timer.interval() > 25:  # If FPS is above 110% of target
+                # Increase frame rate if performance allows
+                new_interval = max(25, int(self.video_timer.interval() * 0.9))  # Decrease interval by 10%
+                self.video_timer.setInterval(new_interval)
+                print(f"📊 Performance: Improved frame interval to {new_interval}ms")
 
     def closeEvent(self, event):
         """Clean up when closing application"""
         self.detection_processor.stop()
         self.detection_processor.wait()
-        if self.video_feed.isOpened():
-            self.video_feed.release()
+        
+        # Clean up camera resources
+        if self.esp32_camera:
+            self.esp32_camera.release()
+        if self.ip_camera:
+            self.ip_camera.release()
+        if self.local_camera:
+            self.local_camera.release()
+            
         event.accept()
 
     def keyPressEvent(self, event):
