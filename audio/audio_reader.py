@@ -5,12 +5,11 @@ import numpy as np
 import pyaudio
 from pyaudio import Stream
 
+from audio.constants import CLIP_SIZE, STEP_SIZE, TARGET_SAMPLING_RATE_HZ
 
-# Maybe offering audio cleaning here as well. 
+
+# Maybe offering audio cleaning here as well.
 class AudioReader(threading.Thread):
-    SAMPLING_RATE = 22050
-    CLASSIFICATION_DURATION = 2
-
     def __init__(self, esp_ip: str, pyaudio_stream: Stream, queue: queue.Queue) -> None:
         super().__init__(daemon=True)
         self.buffer = np.array([], dtype="<i2")  # Fixed data type
@@ -18,7 +17,6 @@ class AudioReader(threading.Thread):
         self.audio_url = f"http://{esp_ip}:82/audio"
         self.running = False
         self.queue = queue
-        self.num_samples = self.SAMPLING_RATE * self.CLASSIFICATION_DURATION
 
     def stop(self):
         self.running = False
@@ -40,9 +38,9 @@ class AudioReader(threading.Thread):
 
                     if self.pyaudio_stream.is_active():
                         self.pyaudio_stream.write(sample_16.tobytes())
-                    if self.buffer.size >= self.num_samples:
-                        self.queue.put(self.buffer[: self.num_samples])
-                        self.buffer = self.buffer[self.num_samples :]
+                    if self.buffer.size >= CLIP_SIZE:
+                        self.queue.put(self.buffer[:CLIP_SIZE])
+                        self.buffer = self.buffer[STEP_SIZE:]
 
         except requests.RequestException as e:
             print(f"Error occurred: {e}")
@@ -54,7 +52,7 @@ if __name__ == "__main__":
     # Start audio reader thread
     p = pyaudio.PyAudio()
     stream = p.open(
-        format=pyaudio.paInt16, channels=1, rate=AudioReader.SAMPLING_RATE, output=True
+        format=pyaudio.paInt16, channels=1, rate=TARGET_SAMPLING_RATE_HZ, output=True
     )
     data_queue = queue.Queue()
     audio_reader = AudioReader(
