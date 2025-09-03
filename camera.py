@@ -7,6 +7,7 @@ from ultralytics import YOLO
 
 os.makedirs("recordings", exist_ok=True)
 
+
 class VideoCamera:
     def __init__(self, source=0):
         self.source = source
@@ -20,8 +21,6 @@ class VideoCamera:
         self.record_queue = Queue(maxsize=100)
         self.record_thread = None
         self.stop_record_flag = False
-
-
 
     def connect(self):
         print("here1")
@@ -46,9 +45,9 @@ class VideoCamera:
             self.start_recording()
 
     def start_recording(self):
-        if self.recording: 
+        if self.recording:
             return
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         timestamp = time.strftime("%Y%m%d-%H%M%S")
         filename = os.path.join("recordings", f"video_{timestamp}.mp4")
 
@@ -97,8 +96,7 @@ class VideoCamera:
             self.reconnect()
             success, image = self.video.read()
             if not success:
-                return b''
-
+                return b""
 
         # Queue frame for recording
         if self.recording and self.out:
@@ -106,12 +104,12 @@ class VideoCamera:
                 self.record_queue.put_nowait(image)
 
         # Encode JPEG for live streaming
-        _, jpeg = cv2.imencode('.jpg', image)
+        _, jpeg = cv2.imencode(".jpg", image)
 
         results = self.model(image)
 
         img = results[0].plot()
 
-        _, jpeg = cv2.imencode('.jpg', img)
+        _, jpeg = cv2.imencode(".jpg", img)
 
         return jpeg.tobytes()
