@@ -2,13 +2,11 @@ from flask import (
     Flask,
     render_template,
     Response,
-    jsonify,
-    current_app,
-    render_template_string,
 )
 from camera import VideoCamera
 import numpy as np
 import cv2
+import time
 from audio import audio_bp
 
 VIDEO_URL = "http://192.168.5.98:81/stream"
@@ -17,6 +15,12 @@ AUDIO_URL = "http://192.168.5.98:81/audio"
 camera = VideoCamera(VIDEO_URL)
 app = Flask(__name__)
 app.register_blueprint(audio_bp)
+
+# Debug: Print registered routes
+with app.app_context():
+    print("Registered routes:")
+    for rule in app.url_map.iter_rules():
+        print(f"  {rule.rule} -> {rule.endpoint}")
 
 
 @app.route("/")

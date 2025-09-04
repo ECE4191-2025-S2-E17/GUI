@@ -241,12 +241,12 @@ class Cnn14_pruned(nn.Module):
         self.fc_audioset = nn.Linear(2048, classes_num, bias=True)
 
         if pre_trained:
-            if not os.path.exists("./epann.pt") or not os.path.exists(
-                "./models/epann.pt"
+            if not os.path.exists("./epann.pt") and not os.path.exists(
+                "./audio/models/epann.pt"
             ):
-                os.system('wget -O "{}" "{}"'.format("./epann.pt", CKPT_PATH))
+                os.system('wget -O "{}" "{}"'.format("./audio/models/epann.pt", CKPT_PATH))
             checkpoint = torch.load(
-                "./epann.pt" if os.path.exists("./epann.pt") else "./models/epann.pt",
+                "./epann.pt" if os.path.exists("./epann.pt") else "./audio/models/epann.pt",
                 map_location=lambda storage, loc: storage,
             )
             self.load_state_dict(checkpoint)

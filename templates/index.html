@@ -72,6 +72,13 @@
               </div>
               <div id="record-loading" class="htmx-indicator">🔄</div>
             </button>
+
+            <button class="img-btn" hx-post="/audio/toggle" hx-target="#audio-toggle-content" hx-swap="outerHTML"
+              style="background: #333; color: white; border-radius: 10px; padding: 10px; font-size: 20px;">
+              <div id="audio-toggle-content">
+                ⏸️
+              </div>
+            </button>
           </div>
         </div>
       </div>
@@ -80,9 +87,15 @@
 
       <div class="col_3">
         <div class="box right-top">
-          <h2>Sightings</h2>
+          <h2>Visual Sightings</h2>
           <div id="sightings-content" hx-get="/sightings" hx-trigger="load" hx-swap="innerHTML">
             Loading sightings...
+          </div>
+        </div>
+        <div class="box audio-middle">
+          <h2>Audio Sightings</h2>
+          <div id="audio-sightings-content" hx-get="/audio/sightings" hx-trigger="load" hx-swap="innerHTML">
+            Loading audio classifications...
           </div>
         </div>
         <div class="box bottom-right">
@@ -117,6 +130,7 @@
   setInterval(() => {
     htmx.ajax('GET', '/status', { target: '#status-content', swap: 'innerHTML' });
     htmx.ajax('GET', '/sightings', { target: '#sightings-content', swap: 'innerHTML' });
+    htmx.ajax('GET', '/audio/sightings', { target: '#audio-sightings-content', swap: 'innerHTML' });
   }, 5000);
 </script>
 

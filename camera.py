@@ -9,14 +9,17 @@ os.makedirs("recordings", exist_ok=True)
 
 
 class VideoCamera:
+    FRAME_PER_CLASSIFICATION = 5
+
     def __init__(self, source=0):
         self.source = source
         # Initialise model
-        self.model = YOLO("best.pt")
+        self.model = YOLO("best.pt", verbose=False)
         self.video = self.connect()
         self.recording = False
         self.out = None
         self.latest_detections = []
+        self.frame_since_last_detection = 0
 
         # Frame queue for async recording
         self.record_queue = Queue(maxsize=100)
@@ -84,13 +87,10 @@ class VideoCamera:
                 continue
 
     def get_frame(self):
-        print("here3")
         if not self.video or not self.video.isOpened():
             print("Disconnected")
             self.reconnect()
-        print("here4")
         success, image = self.video.read()
-        print("here5")
         if not success:
             self.reconnect()
             success, image = self.video.read()
@@ -105,7 +105,12 @@ class VideoCamera:
         # Encode JPEG for live streaming
         _, jpeg = cv2.imencode(".jpg", image)
 
-        results = self.model(image)
+        self.frame_since_last_detection += 1
+        if self.frame_since_last_detection < self.FRAME_PER_CLASSIFICATION:
+            return jpeg.tobytes()
+        self.frame_since_last_detection = 0
+
+        results = self.model(image, verbose=False)
 
         # Store latest detections
         self.latest_detections = []
