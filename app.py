@@ -2,14 +2,14 @@ from flask import Flask, render_template, Response, jsonify, current_app
 from camera import VideoCamera
 import numpy as np
 import cv2
-import time
-import io
+from audio import audio_bp
 
 VIDEO_URL = "http://192.168.5.98:81/stream"
 AUDIO_URL = "http://192.168.5.98:81/audio"
 
 camera = VideoCamera(VIDEO_URL)
 app = Flask(__name__)
+app.register_blueprint(audio_bp)
 
 
 @app.route("/")
@@ -60,13 +60,6 @@ def toggle_recording():
     # Simulate sensor readings
     camera.toggle_recording()
     return jsonify({"recording": camera.recording})
-
-
-@app.route("/toggle_audio")
-def toggle_audio():
-    # Simulate sensor readings
-    camera.toggle_audio()
-    return jsonify({"audio": camera.audio_enabled})
 
 
 if __name__ == "__main__":
