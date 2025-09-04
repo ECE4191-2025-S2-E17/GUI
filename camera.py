@@ -23,9 +23,7 @@ class VideoCamera:
         self.stop_record_flag = False
 
     def connect(self):
-        print("here1")
         cap = cv2.VideoCapture(self.source)
-        print("here2")
         if not cap.isOpened():
             print("Could not connect")
         else:
