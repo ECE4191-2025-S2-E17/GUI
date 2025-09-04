@@ -3,23 +3,35 @@ import queue
 import requests
 import numpy as np
 import pyaudio
-from pyaudio import Stream
 
 from audio.constants import CLIP_SIZE, STEP_SIZE, TARGET_SAMPLING_RATE_HZ
 
 
 # Maybe offering audio cleaning here as well.
 class AudioReader(threading.Thread):
-    def __init__(self, esp_ip: str, pyaudio_stream: Stream, queue: queue.Queue) -> None:
+    def __init__(self, audio_url: str, queue: queue.Queue) -> None:
         super().__init__(daemon=True)
         self.buffer = np.array([], dtype="<i2")  # Fixed data type
-        self.pyaudio_stream = pyaudio_stream
-        self.audio_url = f"http://{esp_ip}:82/audio"
+        self.pyaudio_stream = pyaudio.PyAudio().open(
+            format=pyaudio.paInt16,
+            channels=1,
+            rate=TARGET_SAMPLING_RATE_HZ,
+            output=True,
+        )
+        self.audio_url = audio_url
         self.running = False
         self.queue = queue
 
     def stop(self):
         self.running = False
+
+    def pause_stream(self):
+        if self.pyaudio_stream.is_active():
+            self.pyaudio_stream.stop_stream()
+
+    def resume_stream(self):
+        if not self.pyaudio_stream.is_active():
+            self.pyaudio_stream.start_stream()
 
     def run(self):
         self.running = True
