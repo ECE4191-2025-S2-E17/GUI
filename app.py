@@ -1,4 +1,11 @@
-from flask import Flask, render_template, Response, jsonify, current_app
+from flask import (
+    Flask,
+    render_template,
+    Response,
+    jsonify,
+    current_app,
+    render_template_string,
+)
 from camera import VideoCamera
 import numpy as np
 import cv2
@@ -47,26 +54,55 @@ def video_feed():
     )
 
 
-@app.route("/screenshot")
+@app.route("/screenshot", methods=["POST"])
 def screenshot():
     # Simulate sensor readings
     success, image = camera.video.read()
-    cv2.imwrite("screenshot.jpg", image)
-    return jsonify({"screenshot": "happened"})
+    if success:
+        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+        cv2.imwrite("screenshot.jpg", image)
+        return f"<p>Screenshot taken at {timestamp}</p>"
+    else:
+        return "<p>Failed to take screenshot - camera disconnected</p>"
 
 
-@app.route("/record")
+@app.route("/record", methods=["POST"])
 def toggle_recording():
-    # Simulate sensor readings
     camera.toggle_recording()
-    return jsonify({"recording": camera.recording})
+    return render_template("partials/record_button.html", recording=camera.recording)
 
 
-@app.route("/toggle_audio")
+@app.route("/status", methods=["GET"])
+def get_status():
+    camera_connected = camera.video and camera.video.isOpened()
+    return render_template(
+        "partials/status.html",
+        recording=camera.recording,
+        camera_connected=camera_connected,
+    )
+
+
+@app.route("/toggle_audio", methods=["POST"])
 def toggle_audio():
-    # Simulate sensor readings
-    camera.toggle_audio()
-    return jsonify({"audio": camera.audio_enabled})
+    # For now, just return a placeholder since audio functionality isn't implemented
+    return "<p>Audio toggle not implemented yet</p>"
+
+
+@app.route("/sightings", methods=["GET"])
+def get_sightings():
+    detections = camera.latest_detections
+    if not detections:
+        return "<p>No recent sightings</p>"
+
+    sightings_html = ""
+    for detection in detections[-5:]:  # Show last 5 detections
+        sightings_html += f"""
+        <div style="border-bottom: 1px solid #333; padding: 5px 0;">
+            <strong>{detection['class_name']}</strong><br>
+            <small>Confidence: {detection['confidence']:.2f} | {detection['timestamp']}</small>
+        </div>
+        """
+    return sightings_html
 
 
 if __name__ == "__main__":

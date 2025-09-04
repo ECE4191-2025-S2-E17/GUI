@@ -1,90 +1,123 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Wildlife Monitor</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wildlife Monitor</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+  <style>
+    .htmx-request {
+      opacity: 0.6;
+    }
+
+    .htmx-request .img-btn {
+      pointer-events: none;
+    }
+
+    .htmx-indicator {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 20px;
+      z-index: 1000;
+    }
+
+    .htmx-request .htmx-indicator {
+      display: block;
+    }
+
+    .img-btn {
+      position: relative;
+    }
+  </style>
 </head>
+
 <body>
 
-<div class="app">
+  <div class="app">
     <!-- Sidebar -->
     <div class="side">
-        <img src="{{ url_for('static', filename='assets/Monash_University_logo.svg') }}" alt="Button 1">
-        <div class="sidebar">
-            <div class="logo"></div>
-            <div class="icon"></div>
-            <div class="icon"></div>
-            <div class="icon"></div>
-        </div>
+      <img src="{{ url_for('static', filename='assets/Monash_University_logo.svg') }}" alt="Button 1">
+      <div class="sidebar">
+        <div class="logo"></div>
+        <div class="icon"></div>
+        <div class="icon"></div>
+        <div class="icon"></div>
+      </div>
     </div>
 
     <!-- Main content -->
     <div class="main">
 
-        <div class="col_1">
-            <div class="box big">
-                <img class="video"src="{{ url_for('video_feed') }}"/>
+      <div class="col_1">
+        <div class="box big">
+          <img class="video" src="{{ url_for('video_feed') }}" />
 
-                <div class="col_2">
-                    
-                    <button class="img-btn" id="screenshotBtn">
-                        <img src="{{ url_for('static', filename='assets/ss_button.png') }}" alt="Button 1">
-                    </button>
+          <div class="col_2">
 
-                    <button class="img-btn" id="recordBtn">
-                        <img id="recordImg" src="{{ url_for('static', filename='assets/record_button.png') }}" alt="Record">
-                    </button>
-                </div>
-            </div>
+            <button class="img-btn" hx-post="/screenshot" hx-target="#status-content" hx-swap="innerHTML"
+              hx-indicator="#screenshot-loading">
+              <img src="{{ url_for('static', filename='assets/ss_button.png') }}" alt="Screenshot">
+              <div id="screenshot-loading" class="htmx-indicator">📸</div>
+            </button>
+
+            <button class="img-btn" hx-post="/record" hx-target="#record-btn-content" hx-swap="outerHTML"
+              hx-indicator="#record-loading">
+              <div id="record-btn-content">
+                <img src="{{ url_for('static', filename='assets/record_button.png') }}" alt="Record">
+              </div>
+              <div id="record-loading" class="htmx-indicator">🔄</div>
+            </button>
+          </div>
         </div>
+      </div>
 
 
 
-        <div class="col_3">
-            <div class="box right-top">
-                <h2>Sightings</h2>
-            </div>
-            <div class="box bottom-right">
-                <h2>Status </h2>
-            </div>
+      <div class="col_3">
+        <div class="box right-top">
+          <h2>Sightings</h2>
+          <div id="sightings-content" hx-get="/sightings" hx-trigger="load" hx-swap="innerHTML">
+            Loading sightings...
+          </div>
         </div>
+        <div class="box bottom-right">
+          <h2>Status</h2>
+          <div id="status-content" hx-get="/status" hx-trigger="load" hx-swap="innerHTML">
+            Loading status...
+          </div>
+        </div>
+      </div>
     </div>
-</div>
+  </div>
 
 </body>
 <script>
-    const recordBtn = document.getElementById("recordBtn");
-    const recordImg = document.getElementById("recordImg");
+  // HTMX event listeners for additional functionality
+  document.body.addEventListener('htmx:afterRequest', function (event) {
+    if (event.detail.xhr.status >= 200 && event.detail.xhr.status < 300) {
+      console.log('Request successful:', event.detail.pathInfo.requestPath);
+    } else {
+      console.error('Request failed:', event.detail.pathInfo.requestPath);
+    }
+  });
 
-    let recording = false; 
+  document.body.addEventListener('htmx:responseError', function (event) {
+    console.error('HTMX Error:', event.detail);
+    if (event.detail.target.id === 'status-content') {
+      event.detail.target.innerHTML = '<p style="color: red;">Connection Error</p>';
+    }
+  });
 
-    document.getElementById("recordBtn").addEventListener("click", () => {
-        fetch("/record")
-        .then(response => response.json())
-        .then(data => {
-            console.log("Recording status:", data.recording);
-        })
-        .catch(err => console.error(err));
+  // Auto-refresh status every 5 seconds
+  setInterval(() => {
+    htmx.ajax('GET', '/status', { target: '#status-content', swap: 'innerHTML' });
+    htmx.ajax('GET', '/sightings', { target: '#sightings-content', swap: 'innerHTML' });
+  }, 5000);
+</script>
 
-        recording = !recording; // toggle
-        if (recording) {
-            recordImg.src = "{{ url_for('static', filename='assets/stop_record_button.png') }}";
-            recordImg.alt = "Stop";
-        } else {
-            recordImg.src = "{{ url_for('static', filename='assets/record_button.png') }}";
-            recordImg.alt = "Record";
-        }
-    });
-
-        document.getElementById("screenshotBtn").addEventListener("click", () => {
-        fetch("/screenshot")
-        .then(response => response.json())
-        .then(data => {
-            console.log("Recording status:", data.recording);
-        })
-        .catch(err => console.error(err));
-    });
-    </script>
 </html>

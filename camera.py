@@ -16,6 +16,7 @@ class VideoCamera:
         self.video = self.connect()
         self.recording = False
         self.out = None
+        self.latest_detections = []
 
         # Frame queue for async recording
         self.record_queue = Queue(maxsize=100)
@@ -105,6 +106,26 @@ class VideoCamera:
         _, jpeg = cv2.imencode(".jpg", image)
 
         results = self.model(image)
+
+        # Store latest detections
+        self.latest_detections = []
+        if results and len(results) > 0:
+            for r in results[0].boxes:
+                if r.conf.cpu().numpy()[0] > 0.5:  # confidence threshold
+                    class_id = int(r.cls.cpu().numpy()[0])
+                    confidence = float(r.conf.cpu().numpy()[0])
+                    class_name = (
+                        self.model.names[class_id]
+                        if class_id < len(self.model.names)
+                        else f"Class_{class_id}"
+                    )
+                    self.latest_detections.append(
+                        {
+                            "class_name": class_name,
+                            "confidence": confidence,
+                            "timestamp": time.strftime("%H:%M:%S"),
+                        }
+                    )
 
         img = results[0].plot()
 
