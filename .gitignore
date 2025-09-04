@@ -2,3 +2,5 @@ __pycache__
 venv
 recordings
 screenshot.jpg
+*.pt
+*.ckpt
