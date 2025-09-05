@@ -18,6 +18,7 @@ app = Flask(__name__)
 app.register_blueprint(audio_bp)
 os.makedirs("screenshots", exist_ok=True)
 
+frame = None
 
 # Debug: Print registered routes
 with app.app_context():
@@ -32,6 +33,7 @@ def index():
 
 
 def generate_frames():
+    global frame
     while True:
         frame = camera.get_frame()
 
@@ -63,8 +65,7 @@ def video_feed():
 
 @app.route("/screenshot", methods=["POST"])
 def screenshot():
-    frame = camera.get_frame()
-
+    global frame
     if frame is not None and len(frame) > 0:
         # Convert bytes to numpy array, then decode JPEG
         frame_array = np.frombuffer(frame, dtype=np.uint8)
