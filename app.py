@@ -9,8 +9,8 @@ import cv2
 import time
 from audio import audio_bp
 
-VIDEO_URL = "http://192.168.5.98:81/stream"
-AUDIO_URL = "http://192.168.5.98:81/audio"
+VIDEO_URL = "http://192.168.107.98:81/stream"
+AUDIO_URL = "http://192.168.107.98:82/audio"
 
 camera = VideoCamera(VIDEO_URL)
 app = Flask(__name__)
@@ -85,11 +85,6 @@ def get_status():
         camera_connected=camera_connected,
     )
 
-
-@app.route("/toggle_audio", methods=["POST"])
-def toggle_audio():
-    # For now, just return a placeholder since audio functionality isn't implemented
-    return "<p>Audio toggle not implemented yet</p>"
 
 
 @app.route("/sightings", methods=["GET"])

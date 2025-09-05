@@ -19,10 +19,10 @@ def toggle_audio():
     return render_template("partials/audio_toggle.html", playing=audio_playing)
 
 
-@audio_bp.route("/clear_buffer")
-def start_classification():
+@audio_bp.route("/clear_buffer", methods=["POST"])
+def clear_buffer():
     audio_classifier.clear_buffer()
-    return jsonify({"status": "classification started"})
+    return '<div id="audio-clear-buffer-content">🔄</div>'
 
 
 @audio_bp.route("/sightings")

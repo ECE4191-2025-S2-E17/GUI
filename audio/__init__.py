@@ -4,7 +4,7 @@ from audio.audio_reader import AudioReader
 from queue import Queue
 import atexit
 
-AUDIO_URL = "http://192.168.5.98:82/audio"
+AUDIO_URL = "http://192.168.107.98:82/audio"
 
 # Create the blueprint with URL prefix
 audio_bp = Blueprint("audio", __name__, url_prefix="/audio")

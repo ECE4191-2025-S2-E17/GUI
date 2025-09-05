@@ -41,6 +41,8 @@ class AudioClassifier(threading.Thread):
         self.running = True
         while self.running:
             audio_chunk = self.input_queue.get()
+            # convert audio_chunk to float
+            audio_chunk = audio_chunk / 32768.0
             if audio_chunk is None:
                 break
             audio_chunk = correct_sample(
