@@ -9,7 +9,7 @@ os.makedirs("recordings", exist_ok=True)
 
 
 class VideoCamera:
-    FRAME_PER_CLASSIFICATION = 5
+    FRAME_PER_CLASSIFICATION = 1
 
     def __init__(self, source=0):
         self.source = source

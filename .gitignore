@@ -4,3 +4,4 @@ recordings
 screenshot.jpg
 *.pt
 *.ckpt
+/screenshots/*

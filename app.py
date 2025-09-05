@@ -8,6 +8,7 @@ import numpy as np
 import cv2
 import time
 from audio import audio_bp
+import os
 
 VIDEO_URL = "http://192.168.107.98:81/stream"
 AUDIO_URL = "http://192.168.107.98:82/audio"
@@ -15,6 +16,8 @@ AUDIO_URL = "http://192.168.107.98:82/audio"
 camera = VideoCamera(VIDEO_URL)
 app = Flask(__name__)
 app.register_blueprint(audio_bp)
+os.makedirs("screenshots", exist_ok=True)
+
 
 # Debug: Print registered routes
 with app.app_context():
@@ -60,12 +63,20 @@ def video_feed():
 
 @app.route("/screenshot", methods=["POST"])
 def screenshot():
-    # Simulate sensor readings
-    success, image = camera.video.read()
-    if success:
-        timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-        cv2.imwrite("screenshot.jpg", image)
-        return f"<p>Screenshot taken at {timestamp}</p>"
+    frame = camera.get_frame()
+
+    if frame is not None and len(frame) > 0:
+        # Convert bytes to numpy array, then decode JPEG
+        frame_array = np.frombuffer(frame, dtype=np.uint8)
+        image = cv2.imdecode(frame_array, cv2.IMREAD_COLOR)
+
+        if image is not None:
+            timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
+            filename = f"./screenshots/screenshot_{timestamp}.jpg"
+            cv2.imwrite(filename, image)
+            return f"<p>Screenshot saved as {filename}</p>"
+        else:
+            return "<p>Failed to decode image data</p>"
     else:
         return "<p>Failed to take screenshot - camera disconnected</p>"
 
@@ -84,7 +95,6 @@ def get_status():
         recording=camera.recording,
         camera_connected=camera_connected,
     )
-
 
 
 @app.route("/sightings", methods=["GET"])
