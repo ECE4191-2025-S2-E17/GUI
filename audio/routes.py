@@ -1,4 +1,4 @@
-from flask import jsonify, render_template_string, render_template
+from flask import render_template
 from audio import audio_classifier, audio_reader, audio_results, audio_bp
 
 audio_playing = True
@@ -10,10 +10,12 @@ def toggle_audio():
     if audio_playing:
         # Currently playing, so pause it
         audio_reader.pause_stream()
+        audio_classifier.pause()
         audio_playing = False
     else:
         # Currently paused, so play it
         audio_reader.resume_stream()
+        audio_classifier.resume()
         audio_playing = True
 
     return render_template("partials/audio_toggle.html", playing=audio_playing)

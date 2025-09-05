@@ -7,6 +7,7 @@ from audio.models.temporal_classifier_model import AnimalSoundClassifierModule
 from collections import deque
 from audio.constants import TARGET_SAMPLING_RATE_HZ, CLIP_SIZE
 from audio.audio_preprocessor import correct_sample
+import noisereduce as nr
 
 
 class AudioClassifier(threading.Thread):
@@ -25,6 +26,13 @@ class AudioClassifier(threading.Thread):
         self.result_queue = result_queue
         self.embedding_buffer_size = buffer_size
         self.embedding_buffer = deque()
+        self.classifying = True
+
+    def pause(self):
+        self.classifying = False
+
+    def resume(self):
+        self.classifying = True
 
     def clear_buffer(self):
         self.embedding_buffer.clear()
@@ -41,10 +49,22 @@ class AudioClassifier(threading.Thread):
         self.running = True
         while self.running:
             audio_chunk = self.input_queue.get()
+            if not self.classifying:
+                self.clear_buffer()
+                continue
             # convert audio_chunk to float
             audio_chunk = audio_chunk / 32768.0
             if audio_chunk is None:
                 break
+            # audio_chunk = nr.reduce_noise(
+            #     y=audio_chunk,
+            #     sr=TARGET_SAMPLING_RATE_HZ,
+            #     stationary=True,
+            #     prop_decrease=0.7,
+            #     n_fft=512,
+            #     n_std_thresh_stationary=1.3,
+            #     chunk_size=CLIP_SIZE,
+            # )
             audio_chunk = correct_sample(
                 audio_chunk, TARGET_SAMPLING_RATE_HZ, TARGET_SAMPLING_RATE_HZ, CLIP_SIZE
             )
