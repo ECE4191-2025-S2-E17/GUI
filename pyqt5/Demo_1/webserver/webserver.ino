@@ -3,8 +3,8 @@
 #include <WiFi.h>
 
 // Change network details as needed
-const char *ssid = "Moyu";
-const char *password = "tulip-kiddo-intent";
+const char *ssid = "JedW";
+const char *password = "jedwongzh";
 
 // motor setup
 #define LEFT_FORWARD_PIN 12

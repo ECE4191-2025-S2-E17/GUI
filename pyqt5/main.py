@@ -15,7 +15,7 @@ import requests
 CAMERA_SOURCE = "esp32"  # Changed to use ESP32 since it's working
 
 # ESP32-CAM Configuration
-ESP32_IP = "192.168.5.129"  # ESP32's actual IP address
+ESP32_IP = "172.20.10.2"  # ESP32's actual IP address
 ESP32_PORT = 80
 ESP32_CAMERA_URL = f"http://{ESP32_IP}/stream"
 ESP32_BASE_URL = f"http://{ESP32_IP}:{ESP32_PORT}"
@@ -480,11 +480,11 @@ class RobotController:
     def send_turn_command(self, turn_direction, speed):
         """Send turn command (wheels in opposite directions)"""
         if turn_direction == "left":
-            # Left turn: left wheel backward, right wheel forward
-            return self.send_wheel_command("backward", speed, "forward", speed)
-        elif turn_direction == "right":
-            # Right turn: left wheel forward, right wheel backward
+            # Left turn: left wheel forward, right wheel backward
             return self.send_wheel_command("forward", speed, "backward", speed)
+        elif turn_direction == "right":
+            # Right turn: right wheel forward, left wheel backward
+            return self.send_wheel_command("backward", speed, "forward", speed)
         else:
             return self.send_wheel_command("stop", 0, "stop", 0)
     
@@ -506,12 +506,12 @@ class RobotController:
             self.send_wheel_command("backward", speed, "backward", speed)
             
         elif direction == "left":
-            # Turn left: right wheel forward, left wheel backward
-            self.send_wheel_command("backward", speed, "forward", speed)
+            # Turn left: left wheel forward, right wheel backward
+            self.send_wheel_command("forward", speed, "backward", speed)
             
         elif direction == "right":
-            # Turn right: left wheel forward, right wheel backward
-            self.send_wheel_command("forward", speed, "backward", speed)
+            # Turn right: right wheel forward, left wheel backward
+            self.send_wheel_command("backward", speed, "forward", speed)
             
         elif direction == "stop":
             # Stop both wheels
