@@ -1,5 +1,9 @@
-{% if recording %}
-<img src="{{ url_for('static', filename='assets/stop_record_button.png') }}" alt="Stop Recording">
-{% else %}
-<img src="{{ url_for('static', filename='assets/record_button.png') }}" alt="Start Recording">
-{% endif %}
+<div id="record-btn-content">
+
+    {% if recording %}
+    <img src="{{ url_for('static', filename='assets/stop_record_button.png') }}" alt="Stop Recording">
+    {% else %}
+    <img src="{{ url_for('static', filename='assets/record_button.png') }}" alt="Start Recording">
+    {% endif %}
+
+</div>

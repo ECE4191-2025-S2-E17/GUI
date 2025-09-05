@@ -71,6 +71,7 @@ class VideoCamera:
             return
         self.stop_record_flag = True
         self.recording = False
+        print(self.recording)
         self.record_thread.join()
         if self.out:
             self.out.release()
