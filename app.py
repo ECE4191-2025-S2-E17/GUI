@@ -100,7 +100,7 @@ def get_status():
 
 @app.route("/sightings", methods=["GET"])
 def get_sightings():
-    detections = camera.latest_detections
+    detections = camera.detections
     if not detections:
         return "<p>No recent sightings</p>"
 

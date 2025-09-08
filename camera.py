@@ -6,6 +6,16 @@ from queue import Queue
 from ultralytics import YOLO
 
 os.makedirs("recordings", exist_ok=True)
+animal_emojis = {
+    0: "🦜",       # Cockatoo (parrot emoji as closest)
+    1: "🐊",       # Crocodile
+    2: "🐸",       # Frog
+    3: "🦘",       # Kangaroo
+    4: "🐨",       # Koala
+    5: "🦆" ,      # Platypus (no platypus emoji, use duck or similar)
+    6: "😈",       # Tasdevil (no emoji, using devil face as playful substitute)
+    7: "🐻‍❄️"     # Wombat (no wombat emoji, using bear as closest)
+}
 
 
 class VideoCamera:
@@ -18,6 +28,7 @@ class VideoCamera:
         self.video = self.connect()
         self.recording = False
         self.out = None
+        self.detections = []
         self.latest_detections = []
         self.frame_since_last_detection = 0
 
@@ -113,27 +124,61 @@ class VideoCamera:
 
         results = self.model(image, verbose=False)
 
-        # Store latest detections
+        # --- Deduplicated detections ---
+        MAX_AGE = 5          # seconds to keep a detection alive
+        IOU_THRESHOLD = 0.5  # overlap threshold to consider same object
+
+        def iou(box1, box2):
+            x1 = max(box1[0], box2[0])
+            y1 = max(box1[1], box2[1])
+            x2 = min(box1[2], box2[2])
+            y2 = min(box1[3], box2[3])
+            inter_area = max(0, x2 - x1) * max(0, y2 - y1)
+            area1 = (box1[2]-box1[0]) * (box1[3]-box1[1])
+            area2 = (box2[2]-box2[0]) * (box2[3]-box2[1])
+            if area1 + area2 - inter_area == 0:
+                return 0
+            return inter_area / (area1 + area2 - inter_area)
+
+        current_time = time.time()
+        # Remove old detections
+        self.latest_detections = [
+            s for s in self.latest_detections if current_time - s['timestamp'] < MAX_AGE
+        ]
+
         if results and len(results) > 0:
             for r in results[0].boxes:
-                if r.conf.cpu().numpy()[0] > 0.7:  # confidence threshold
+                conf = float(r.conf.cpu().numpy()[0])
+                if conf > 0.7:  # confidence threshold
                     class_id = int(r.cls.cpu().numpy()[0])
-                    confidence = float(r.conf.cpu().numpy()[0])
                     class_name = (
                         self.model.names[class_id]
                         if class_id < len(self.model.names)
                         else f"Class_{class_id}"
                     )
-                    self.latest_detections.append(
-                        {
-                            "class_name": class_name,
-                            "confidence": confidence,
-                            "timestamp": time.strftime("%H:%M:%S"),
-                        }
-                    )
+                    bbox = r.xyxy.cpu().numpy()[0]  # x1,y1,x2,y2
+
+                    # Check for duplicates
+                    duplicate = False
+                    for s in self.latest_detections:
+                        if s['class_name'] == f"{animal_emojis[class_id]} {class_name}" and iou(bbox, s['bbox']) > IOU_THRESHOLD:
+                            duplicate = True
+                            break
+
+                    if not duplicate:
+                        self.latest_detections.append({
+                            "class_name": f"{animal_emojis[class_id]} {class_name}",
+                            "confidence": conf,
+                            "bbox": bbox,
+                            "timestamp": current_time
+                        })
+                        self.detections.append({
+                            "class_name": f"{animal_emojis[class_id]} {class_name}",
+                            "confidence": conf,
+                            "timestamp": current_time
+                        })
 
         img = results[0].plot()
-
         _, jpeg = cv2.imencode(".jpg", img)
 
         return jpeg.tobytes()
