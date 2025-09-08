@@ -56,7 +56,7 @@ body {
     grid-template-columns: 16fr 5fr;
     gap: 15px;
     margin-left: 20px;
-    height: 100%;
+    height: 40%;
 }
 
 .box {
@@ -76,7 +76,7 @@ body {
 
 .right-top {
     grid-column: 2 / 3;
-    height: 40%;
+    height: 30%;
 }
 
 .audio-middle {
@@ -86,13 +86,13 @@ body {
 
 .bottom-right {
     grid-column: 2 / 3;
-    height: 30%;
+    height: 25%;
 }
 
 .box.big {
     display: flex;
-    width: 1/2;
     flex-direction: row;
+    justify-content: space-between;
     gap: 10px;
     padding-left: 20px;
     padding-top: 20px;
@@ -102,10 +102,59 @@ body {
 
 .video {
     width: 90%;
-    height: auto;
+    height: 500px;
     display: flex;
     border-radius: 20px;
 }
+.controls{
+    background-color: #000;
+    border-radius: 20px;
+    height: 140px;
+    padding: 10px;
+    display: flex;
+    justify-content: center;
+    gap: 200px;
+    margin-top: 10px;
+    color: #eee;
+}
+
+.keyboard-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.keyboard-section h3 {
+    margin-bottom: 5px;
+    font-size: 16px;
+    color: #fff;
+}
+
+.row {
+    display: flex;
+    justify-content: center;
+    margin: 3px 0;
+}
+
+.key {
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+    margin: 3px;
+    border-radius: 6px;
+    border: 2px solid #444;
+    background: #222;
+    color: #eee;
+    font-weight: bold;
+    text-align: center;
+    transition: background 0.1s, transform 0.1s;
+}
+
+.key.active {
+    background: #4caf50;
+    transform: scale(1.1);
+}
+
 
 .col_3 {
     display: flex;
