@@ -114,10 +114,9 @@ class VideoCamera:
         results = self.model(image, verbose=False)
 
         # Store latest detections
-        self.latest_detections = []
         if results and len(results) > 0:
             for r in results[0].boxes:
-                if r.conf.cpu().numpy()[0] > 0.5:  # confidence threshold
+                if r.conf.cpu().numpy()[0] > 0.7:  # confidence threshold
                     class_id = int(r.cls.cpu().numpy()[0])
                     confidence = float(r.conf.cpu().numpy()[0])
                     class_name = (

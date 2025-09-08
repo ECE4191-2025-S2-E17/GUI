@@ -48,7 +48,7 @@ def get_audio_sightings():
         class_name = result.get("name", "Unknown")
         confidence = result.get("confidence", 0.0)
         sightings_html += f"""
-        <div style="border-bottom: 1px solid #333; padding: 5px 0;">
+        <div style="border-bottom: 1px solid #333; padding: 5px 0; font-size: 0.8em;">
             <strong>🔊 {class_name}</strong><br>
             <small>Confidence: {confidence:.2f}</small>
         </div>

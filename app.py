@@ -107,7 +107,7 @@ def get_sightings():
     sightings_html = ""
     for detection in detections[-5:]:  # Show last 5 detections
         sightings_html += f"""
-        <div style="border-bottom: 1px solid #333; padding: 5px 0;">
+        <div style="border-bottom: 1px solid #333; padding: 5px 0;font-size: 0.8em;">
             <strong>{detection['class_name']}</strong><br>
             <small>Confidence: {detection['confidence']:.2f} | {detection['timestamp']}</small>
         </div>
