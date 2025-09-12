@@ -3,20 +3,19 @@ from flask import (
     render_template,
     Response,
 )
-from datetime import datetime
 from camera import VideoCamera
 import numpy as np
 import cv2
 import time
-#from audio import audio_bp
+from audio import audio_bp
 import os
 
-VIDEO_URL = 0
+VIDEO_URL = "http://192.168.107.98:81/stream"
 AUDIO_URL = "http://192.168.107.98:82/audio"
 
 camera = VideoCamera(VIDEO_URL)
 app = Flask(__name__)
-#app.register_blueprint(audio_bp)
+app.register_blueprint(audio_bp)
 os.makedirs("screenshots", exist_ok=True)
 
 frame = None
@@ -106,13 +105,11 @@ def get_sightings():
         return "<p>No recent sightings</p>"
 
     sightings_html = ""
-    for detection in detections[-4:]:  # Show last 4 detections
-        dt = datetime.fromtimestamp(detection['timestamp'])
-        time_str = dt.strftime("%#I:%M")
+    for detection in detections[-5:]:  # Show last 5 detections
         sightings_html += f"""
         <div style="border-bottom: 1px solid #333; padding: 5px 0;font-size: 0.8em;">
             <strong>{detection['class_name']}</strong><br>
-            <small>Confidence: {detection['confidence']:.2f} | {dt}</small>
+            <small>Confidence: {detection['confidence']:.2f} | {detection['timestamp']}</small>
         </div>
         """
     return sightings_html
