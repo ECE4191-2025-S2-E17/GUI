@@ -54,69 +54,40 @@
     <div class="main">
 
       <div class="col_1">
-        <div class="center">
-          <div class="box big">
-            <img class="video" src="{{ url_for('video_feed') }}" />
+        <div class="box big">
+          <img class="video" src="{{ url_for('video_feed') }}" />
 
-            <div class="col_2">
+          <div class="col_2">
 
-              <button class="img-btn" hx-post="/screenshot" hx-target="#status-content" hx-swap="innerHTML"
-                hx-indicator="#screenshot-loading">
-                <img src="{{ url_for('static', filename='assets/ss_button.png') }}" alt="Screenshot">
-                <div id="screenshot-loading" class="htmx-indicator">📸</div>
-              </button>
+            <button class="img-btn" hx-post="/screenshot" hx-target="#status-content" hx-swap="innerHTML"
+              hx-indicator="#screenshot-loading">
+              <img src="{{ url_for('static', filename='assets/ss_button.png') }}" alt="Screenshot">
+              <div id="screenshot-loading" class="htmx-indicator">📸</div>
+            </button>
 
-              <button class="img-btn" hx-post="/record" hx-target="#record-btn-content" hx-swap="outerHTML"
-                hx-indicator="#record-loading">
-                <div id="record-btn-content">
-                  <img src="{{ url_for('static', filename='assets/record_button.png') }}" alt="Record">
-                </div>
-                <div id="record-loading" class="htmx-indicator">🔄</div>
-              </button>
+            <button class="img-btn" hx-post="/record" hx-target="#record-btn-content" hx-swap="outerHTML"
+              hx-indicator="#record-loading">
+              <div id="record-btn-content">
+                <img src="{{ url_for('static', filename='assets/record_button.png') }}" alt="Record">
+              </div>
+              <div id="record-loading" class="htmx-indicator">🔄</div>
+            </button>
 
-              <button class="img-btn" hx-post="/audio/toggle" hx-target="#audio-toggle-content" hx-swap="outerHTML"
-                style="background: #333; color: white; border-radius: 10px; padding: 10px; font-size: 20px;">
-                <div id="audio-toggle-content">
-                  ⏸️
-                </div>
-              </button>
+            <button class="img-btn" hx-post="/audio/toggle" hx-target="#audio-toggle-content" hx-swap="outerHTML"
+              style="background: #333; color: white; border-radius: 10px; padding: 10px; font-size: 20px;">
+              <div id="audio-toggle-content">
+                ⏸️
+              </div>
+            </button>
 
-              <button class="img-btn" hx-post="/audio/clear_buffer" hx-target="#audio-clear-buffer-content"
-                hx-swap="outerHTML"
-                style="background: #333; color: white; border-radius: 10px; padding: 10px; font-size: 20px;">
-                <div id="audio-clear-buffer-content">
-                  🔄
-                </div>
-              </button>
-            </div>
+            <button class="img-btn" hx-post="/audio/clear_buffer" hx-target="#audio-clear-buffer-content"
+              hx-swap="outerHTML"
+              style="background: #333; color: white; border-radius: 10px; padding: 10px; font-size: 20px;">
+              <div id="audio-clear-buffer-content">
+                🔄
+              </div>
+            </button>
           </div>
-          <div class="controls">
-            <div class="keyboard-section">
-              <div class="row">
-                <div class="key" id="key-w">W</div>
-              </div>
-              <div class="row">
-                <div class="key" id="key-a">A</div>
-                <div class="key" id="key-s">S</div>
-                <div class="key" id="key-d">D</div>
-              </div>
-              <h3>Movement</h3>
-            </div>
-
-            <!-- Arrow keys -->
-            <div class="keyboard-section">
-              <div class="row">
-                <div class="key" id="key-up">↑</div>
-              </div>
-              <div class="row">
-                <div class="key" id="key-left">←</div>
-                <div class="key" id="key-down">↓</div>
-                <div class="key" id="key-right">→</div>
-              </div>
-              <h3>Gimbal</h3>
-            </div>
-          </div>
-          
         </div>
       </div>
 
@@ -170,6 +141,5 @@
     htmx.ajax('GET', '/audio/sightings', { target: '#audio-sightings-content', swap: 'innerHTML' });
   }, 5000);
 </script>
-<script src="{{ url_for('static', filename='robot-control.js') }}"></script>
 
 </html>
