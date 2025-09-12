@@ -2,12 +2,16 @@ from flask import (
     Flask,
     render_template,
     Response,
+    stream_template,
 )
 from camera import VideoCamera
 import numpy as np
 import cv2
 import time
+import json
 from audio import audio_bp
+from drive import drive_bp
+from status import status_bp, status_manager
 import os
 
 VIDEO_URL = "http://192.168.107.98:81/stream"
@@ -16,9 +20,21 @@ AUDIO_URL = "http://192.168.107.98:82/audio"
 camera = VideoCamera(VIDEO_URL)
 app = Flask(__name__)
 app.register_blueprint(audio_bp)
+app.register_blueprint(drive_bp)
+app.register_blueprint(status_bp)
 os.makedirs("screenshots", exist_ok=True)
 
 frame = None
+
+# Initialize status
+def update_camera_status():
+    """Update camera and recording status"""
+    camera_connected = camera.video and camera.video.isOpened()
+    recording = camera.recording
+    status_manager.update_status(
+        camera_connected=camera_connected,
+        recording=recording
+    )
 
 # Debug: Print registered routes
 with app.app_context():
@@ -85,6 +101,7 @@ def screenshot():
 @app.route("/record", methods=["POST"])
 def toggle_recording():
     camera.toggle_recording()
+    update_camera_status()  # Notify status change
     return render_template("partials/record_button.html", recording=camera.recording)
 
 

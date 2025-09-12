@@ -37,6 +37,23 @@
 </head>
 
 <body>
+  <!-- HTMX Keyboard Controls (invisible) -->
+  <div style="position: absolute; left: -9999px;">
+    <!-- Movement controls -->
+    <button hx-get="/drive/forward" hx-trigger="keydown[key=='w'] from:body" hx-swap="none" tabindex="-1"></button>
+    <button hx-get="/drive/backward" hx-trigger="keydown[key=='s'] from:body" hx-swap="none" tabindex="-1"></button>
+    <button hx-get="/drive/left" hx-trigger="keydown[key=='a'] from:body" hx-swap="none" tabindex="-1"></button>
+    <button hx-get="/drive/right" hx-trigger="keydown[key=='d'] from:body" hx-swap="none" tabindex="-1"></button>
+    
+    <!-- Stop on key release -->
+    <button hx-get="/drive/stop" hx-trigger="keyup[key=='w'] from:body, keyup[key=='s'] from:body, keyup[key=='a'] from:body, keyup[key=='d'] from:body" hx-swap="none" tabindex="-1"></button>
+    
+    <!-- Speed controls -->
+    <button hx-get="/drive/faster" hx-trigger="keydown[key=='ArrowUp'] from:body" hx-swap="none" tabindex="-1"></button>
+    <button hx-get="/drive/slower" hx-trigger="keydown[key=='ArrowDown'] from:body" hx-swap="none" tabindex="-1"></button>
+    <button hx-get="/drive/turn_faster" hx-trigger="keydown[key=='ArrowRight'] from:body" hx-swap="none" tabindex="-1"></button>
+    <button hx-get="/drive/turn_slower" hx-trigger="keydown[key=='ArrowLeft'] from:body" hx-swap="none" tabindex="-1"></button>
+  </div>
 
   <div class="app">
     <!-- Sidebar -->
@@ -107,9 +124,25 @@
           </div>
         </div>
         <div class="box bottom-right">
-          <h2>Status</h2>
-          <div id="status-content" hx-get="/status" hx-trigger="load" hx-swap="innerHTML">
-            Loading status...
+          <h2>System Status & Controls</h2>
+          
+          <!-- Status Display -->
+          <div id="status-content">
+            <div>Camera: <span id="camera-status">Checking...</span></div>
+            <div>Recording: <span id="recording-status">Checking...</span></div>
+            <div>Last Update: <span id="timestamp">--:--:--</span></div>
+          </div>
+          
+          <!-- Motor Control Status -->
+          <div style="margin-top: 15px; padding: 10px; background: #222; border-radius: 5px;">
+            <h3>Motor Control</h3>
+            <p style="margin: 5px 0;">Use WASD keys to drive</p>
+            <p style="margin: 5px 0;">↑/↓ arrows: Wheel speed</p>
+            <p style="margin: 5px 0;">←/→ arrows: Turn speed</p>
+            <div style="margin-top: 10px;">
+              <div>Wheel Speed: <span id="wheel-speed">100</span></div>
+              <div>Turn Speed: <span id="turn-speed">50</span></div>
+            </div>
           </div>
         </div>
       </div>
@@ -134,12 +167,42 @@
     }
   });
 
-  // Auto-refresh status every 5 seconds
+  // Auto-refresh visual and audio sightings every 5 seconds  
   setInterval(() => {
-    htmx.ajax('GET', '/status', { target: '#status-content', swap: 'innerHTML' });
     htmx.ajax('GET', '/sightings', { target: '#sightings-content', swap: 'innerHTML' });
     htmx.ajax('GET', '/audio/sightings', { target: '#audio-sightings-content', swap: 'innerHTML' });
   }, 5000);
+
+  // Server-Sent Events for real-time status updates
+  const eventSource = new EventSource('/status_stream');
+  
+  eventSource.onmessage = function(event) {
+    const data = JSON.parse(event.data);
+    
+    // Update status indicators
+    document.getElementById('camera-status').textContent = data.camera_connected ? 'Connected' : 'Disconnected';
+    document.getElementById('camera-status').style.color = data.camera_connected ? '#4CAF50' : '#f44336';
+    
+    document.getElementById('recording-status').textContent = data.recording ? 'Recording' : 'Stopped';
+    document.getElementById('recording-status').style.color = data.recording ? '#f44336' : '#4CAF50';
+    
+    document.getElementById('timestamp').textContent = data.timestamp;
+    
+    // Update motor speeds
+    document.getElementById('wheel-speed').textContent = data.wheel_speed;
+    document.getElementById('turn-speed').textContent = data.turn_speed;
+  };
+
+  eventSource.onerror = function(event) {
+    console.error('SSE connection error:', event);
+    document.getElementById('camera-status').textContent = 'Connection Error';
+    document.getElementById('camera-status').style.color = '#f44336';
+  };
+
+  // Stop motors when window loses focus (safety feature)
+  window.addEventListener('blur', function() {
+    htmx.ajax('GET', '/drive/stop', { swap: 'none' });
+  });
 </script>
 
 </html>
