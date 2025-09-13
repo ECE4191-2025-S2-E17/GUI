@@ -1,23 +1,21 @@
-<div style="display: flex; gap: 30%; align-items: center; justify-content: center; max-width: 600px; margin: auto;">
-  <div style="text-align: center; flex: 1;">
-    {% if recording %}
-      🟢<br>Recording
-    {% else %}
-      ❌<br>Recording
-    {% endif %}
-  </div>
-  <div style="text-align: center; flex: 1;">
+<div style="display: flex; justify-content: center; max-width: 600px; margin: auto; gap: 100%;">
+  <div style="text-align: center; flex: 1; display: inline-block; line-height: 1;">
     {% if camera_connected %}
-      🟢<br>Camera
+      🟢
+      <div style="margin-top: 3px;">Camera</div>
     {% else %}
-      ❌<br>Camera
+      ❌
+      <div style="margin-top: 3px;">Camera</div>
     {% endif %}
   </div>
-  <div style="text-align: center; flex: 1;">
+
+  <div style="text-align: center; flex: 1; display: inline-block; line-height: 1;">
     {% if ai_on %}
-      🟢<br>AI
+      🟢
+      <div style="margin-top: 3px;">AI</div>
     {% else %}
-      ❌<br>AI
+      ❌
+      <div style="margin-top: 3px;">AI</div>
     {% endif %}
   </div>
 </div>

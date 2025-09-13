@@ -101,21 +101,48 @@
 
 
       <div class="col_3">
-        <div class="box bottom-right" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+        <div class="box status-box" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
           <div id="status-content" hx-get="/status" hx-trigger="load, every 1s" hx-swap="innerHTML">
             Loading status...
           </div>
         </div>
-        <div class="box right-top">
+        <div class="box sightings-box">
           <h2>Visual Sightings</h2>
           <div id="sightings-content" hx-get="/sightings" hx-trigger="load, every 2s" hx-swap="innerHTML">
             Loading sightings...
           </div>
         </div>
-        <div class="box audio-middle">
+        <div class="box audio-box">
           <h2>Audio Sightings</h2>
           <div id="audio-sightings-content" hx-get="/audio/sightings" hx-trigger="load" hx-swap="innerHTML">
             Loading audio classifications...
+          </div>
+        </div>
+        <div class="box controls-box">
+          <div class="keyboard-section">
+              <div class="row">
+                <div class="key" id="key-w">W</div>
+              </div>
+              <div class="row">
+                <div class="key" id="key-a">A</div>
+                <div class="key" id="key-s">S</div>
+                <div class="key" id="key-d">D</div>
+              </div>
+              <h3>Movement</h3>
+            </div>
+
+            <!-- Arrow keys -->
+            <div class="keyboard-section">
+              <div class="row">
+                <div class="key" id="key-up">↑</div>
+              </div>
+              <div class="row">
+                <div class="key" id="key-left">←</div>
+                <div class="key" id="key-down">↓</div>
+                <div class="key" id="key-right">→</div>
+              </div>
+              <h3>Gimbal</h3>
+            </div>
           </div>
         </div>
       </div>

@@ -112,7 +112,7 @@ def get_sightings():
         return "<p>No recent sightings</p>"
 
     sightings_html = ""
-    for detection in detections[-4:]:  # Show last 4 detections
+    for detection in reversed(detections[-4:]):  # Show last 4 detections
         dt = datetime.fromtimestamp(detection['timestamp'])
         time_str = dt.strftime("%#I:%M")
         sightings_html += f"""
