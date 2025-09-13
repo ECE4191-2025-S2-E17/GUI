@@ -76,7 +76,7 @@ body {
 
 .right-top {
     grid-column: 2 / 3;
-    height: 40%;
+    height: 30%;
 }
 
 .audio-middle {
@@ -86,7 +86,7 @@ body {
 
 .bottom-right {
     grid-column: 2 / 3;
-    height: 30%;
+    height: 6%;
 }
 
 .box.big {
@@ -101,7 +101,7 @@ body {
 }
 
 .video {
-    width: 90%;
+    width: 85%;
     height: auto;
     display: flex;
     border-radius: 20px;

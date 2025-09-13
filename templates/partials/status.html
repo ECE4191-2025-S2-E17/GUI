@@ -1,11 +1,23 @@
-{% if recording %}
-🔴 Recording
-{% else %}
-⚫ Not Recording
-{% endif %}
-<br>
-{% if camera_connected %}
-📹 Camera Connected
-{% else %}
-❌ Camera Disconnected
-{% endif %}
+<div style="display: flex; gap: 30%; align-items: center; justify-content: center; max-width: 600px; margin: auto;">
+  <div style="text-align: center; flex: 1;">
+    {% if recording %}
+      🟢<br>Recording
+    {% else %}
+      ❌<br>Recording
+    {% endif %}
+  </div>
+  <div style="text-align: center; flex: 1;">
+    {% if camera_connected %}
+      🟢<br>Camera
+    {% else %}
+      ❌<br>Camera
+    {% endif %}
+  </div>
+  <div style="text-align: center; flex: 1;">
+    {% if ai_on %}
+      🟢<br>AI
+    {% else %}
+      ❌<br>AI
+    {% endif %}
+  </div>
+</div>

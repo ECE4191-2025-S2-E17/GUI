@@ -88,6 +88,11 @@ def toggle_recording():
     camera.toggle_recording()
     return render_template("partials/record_button.html", recording=camera.recording)
 
+@app.route("/ai", methods=["POST"])
+def toggle_ai():
+    camera.toggle_ai()
+    return render_template("partials/ai_button.html", ai_on=camera.ai_on)
+
 
 @app.route("/status", methods=["GET"])
 def get_status():
@@ -96,6 +101,7 @@ def get_status():
         "partials/status.html",
         recording=camera.recording,
         camera_connected=camera_connected,
+        ai_on = camera.ai_on
     )
 
 

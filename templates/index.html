@@ -58,6 +58,13 @@
           <img class="video" src="{{ url_for('video_feed') }}" />
 
           <div class="col_2">
+            <button class="img-btn" hx-post="/ai" hx-target="#ai-btn-content" hx-swap="innerHTML"
+              hx-indicator="#ai-loading">
+              <div id="ai-btn-content">
+                <img src="{{ url_for('static', filename='assets/ai-off-button.png') }}" alt="AI on">
+              </div>
+              <div id="ai-loading" class="htmx-indicator">📸</div>
+            </button>
 
             <button class="img-btn" hx-post="/screenshot" hx-target="#status-content" hx-swap="innerHTML"
               hx-indicator="#screenshot-loading">
@@ -94,6 +101,11 @@
 
 
       <div class="col_3">
+        <div class="box bottom-right" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+          <div id="status-content" hx-get="/status" hx-trigger="load, every 1s" hx-swap="innerHTML">
+            Loading status...
+          </div>
+        </div>
         <div class="box right-top">
           <h2>Visual Sightings</h2>
           <div id="sightings-content" hx-get="/sightings" hx-trigger="load, every 2s" hx-swap="innerHTML">
@@ -104,12 +116,6 @@
           <h2>Audio Sightings</h2>
           <div id="audio-sightings-content" hx-get="/audio/sightings" hx-trigger="load" hx-swap="innerHTML">
             Loading audio classifications...
-          </div>
-        </div>
-        <div class="box bottom-right">
-          <h2>Status</h2>
-          <div id="status-content" hx-get="/status" hx-trigger="load" hx-swap="innerHTML">
-            Loading status...
           </div>
         </div>
       </div>

@@ -1,0 +1,9 @@
+<div id="ai-btn-content">
+
+    {% if ai_on %}
+    <img src="{{ url_for('static', filename='assets/ai-on-button.png') }}" alt="AI on">
+    {% else %}
+    <img src="{{ url_for('static', filename='assets/ai-off-button.png') }}" alt="AI off">
+    {% endif %}
+
+</div>
