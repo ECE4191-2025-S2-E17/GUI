@@ -96,6 +96,64 @@
             </button>
           </div>
         </div>
+        
+        <!-- Rover Status Display -->
+        <div class="rover-status-container">
+          <!-- Drive Speed Display -->
+          <div class="box rover-speed-box">
+            <h3>Drive Speed</h3>
+            <div class="rover-display">
+              <div class="wheel-speed left-wheels">
+                <div class="wheel-indicator">
+                  <div class="wheel front-left"></div>
+                  <span class="speed-text" id="left-front-speed">0 cm/s</span>
+                </div>
+                <div class="wheel-indicator">
+                  <div class="wheel rear-left"></div>
+                  <span class="speed-text" id="left-rear-speed">0 cm/s</span>
+                </div>
+              </div>
+              
+              <div class="rover-center">
+                <div class="rover-icon">
+                  <img src="{{ url_for('static', filename='assets/RoverTopview.png') }}" alt="Rover Top View" class="rover-image">
+                </div>
+              </div>
+              
+              <div class="wheel-speed right-wheels">
+                <div class="wheel-indicator">
+                  <div class="wheel front-right"></div>
+                  <span class="speed-text" id="right-front-speed">0 cm/s</span>
+                </div>
+                <div class="wheel-indicator">
+                  <div class="wheel rear-right"></div>
+                  <span class="speed-text" id="right-rear-speed">0 cm/s</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Height Display -->
+          <div class="box rover-height-box">
+            <h3>Robot Height</h3>
+            <div class="height-display">
+              <div class="height-bar-container">
+                <div class="height-labels">
+                  <span class="max-height">120mm</span>
+                  <span class="min-height">70mm</span>
+                </div>
+                <div class="height-bar">
+                  <div class="height-fill" id="height-fill"></div>
+                  <div class="height-indicator" id="height-indicator"></div>
+                </div>
+              </div>
+              <div class="height-value">
+                <span class="height-number" id="height-number">72</span>
+                <span class="height-unit">mm</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
 
@@ -142,6 +200,15 @@
                 <div class="key" id="key-right">→</div>
               </div>
               <h3>Gimbal</h3>
+            </div>
+
+            <!-- Height controls -->
+            <div class="keyboard-section">
+              <div class="row">
+                <div class="key height-key" id="key-q">Q</div>
+                <div class="key height-key" id="key-e">E</div>
+              </div>
+              <h3>Height</h3>
             </div>
           </div>
         </div>
