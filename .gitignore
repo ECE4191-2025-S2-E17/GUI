@@ -4,3 +4,4 @@ pyqt5/__pycache__
 flask/venv
 flask/__pycache__
 venv
+*.mp4
