@@ -4,10 +4,8 @@ from flask import (
     Response,
     jsonify,
 )
-from flask_socketio import SocketIO, emit
 from datetime import datetime
 
-from sympy import threaded
 from camera import VideoCamera
 import numpy as np
 import cv2
@@ -15,21 +13,16 @@ import time
 import random
 
 from audio import audio_bp
-from drive import drive_bp
 import os
 
 VIDEO_URL = "http://192.168.95.98:82/video"
 AUDIO_URL = "http://192.168.107.98:82/audio"
-DRIVE_WS_URL = "ws://192.168.5.98:85/drive"
 
 camera = VideoCamera(0)
 app = Flask(__name__)
 app.config["AUDIO_URL"] = AUDIO_URL
 app.config["VIDEO_URL"] = VIDEO_URL
-app.config["DRIVE_WS_URL"] = DRIVE_WS_URL
-socketio = SocketIO(app)
 app.register_blueprint(audio_bp)
-app.register_blueprint(drive_bp)
 os.makedirs("screenshots", exist_ok=True)
 
 frame = None
@@ -138,148 +131,5 @@ def get_sightings():
     return sightings_html
 
 
-# Robot status endpoint for rover display
-@app.route("/robot_status")
-def robot_status():
-    """Return current robot status including wheel speeds and height"""
-    # TODO (figure out radius of wheels):
-    wheel_radius = 0.1  # Example wheel radius in meters
-
-    # Use wheel_radius and sent pwm to calculate linear speeds
-    current_time = time.time()
-    # TODO: Get actual wheel speeds from ESP32 or motor controllers
-    # Example options:
-
-    # Option 1: If you have global variables tracking current motor commands
-    # left_speed = current_left_motor_pwm  # Replace with your actual variable
-    # right_speed = current_right_motor_pwm  # Replace with your actual variable
-
-    # Option 2: If you need to query ESP32 for current status
-    # try:
-    #     response = requests.get("http://192.168.5.129/status", timeout=1)
-    #     data = response.json()
-    #     left_speed = data.get('left_wheel', 0)
-    #     right_speed = data.get('right_wheel', 0)
-    # except:
-    #     left_speed = 0
-    #     right_speed = 0
-
-    # Placeholder until you implement actual communication
-    left_speed = 0
-    right_speed = 0
-
-    left_linear_speed = left_speed * wheel_radius  # m/s
-    right_linear_speed = right_speed * wheel_radius  # m/s
-
-    # Simulate height variation (replace with actual sensor data)
-    # Range: 70-120mm, default around 72mm
-    height = 72 + int(10 * np.sin(current_time * 0.2))  # Varies between 62-82mm
-    height = max(70, min(120, height))  # Clamp between 70-120mm
-
-    return jsonify(
-        {
-            "wheels": {"left": left_speed, "right": right_speed},
-            "height": height,
-            "timestamp": current_time,
-        }
-    )
-
-
-# Add new robot status endpoint for rover display
-@app.route("/robot/status")
-def robot_detailed_status():
-    """Return detailed robot status for rover display"""
-    current_time = time.time()
-
-    # TODO: Get actual data from ESP32
-    # For now, use simulated data
-
-    # Simulate wheel speeds (in cm/s)
-    left_wheel_speed = random.randint(0, 50) if random.random() > 0.7 else 0
-    right_wheel_speed = random.randint(0, 50) if random.random() > 0.7 else 0
-
-    # Simulate height variation (replace with actual sensor data)
-    # Range: 70-120mm, default around 72mm
-    height = 72 + int(15 * np.sin(current_time * 0.1))  # Varies between 57-87mm
-    height = max(70, min(120, height))  # Clamp between 70-120mm
-
-    return jsonify(
-        {
-            "left_wheel_speed": left_wheel_speed,
-            "right_wheel_speed": right_wheel_speed,
-            "height": height,
-            "battery_level": random.randint(60, 100),  # Simulate battery
-            "connection_status": "connected",
-            "timestamp": current_time,
-        }
-    )
-
-
-# Drive command endpoint to integrate with ESP32
-@app.route("/drive")
-def drive_command():
-    """Handle drive commands and forward to ESP32"""
-    from flask import request
-
-    direction = request.args.get("direction", "stop")
-    speed = int(request.args.get("speed", 0))
-
-    # Convert to ESP32 wheel commands (lw, rw format)
-    left_wheel = 0
-    right_wheel = 0
-
-    if direction == "forward":
-        left_wheel = speed
-        right_wheel = speed
-    elif direction == "backward":
-        left_wheel = -speed
-        right_wheel = -speed
-    elif direction == "left":
-        left_wheel = -speed
-        right_wheel = speed
-    elif direction == "right":
-        left_wheel = speed
-        right_wheel = -speed
-
-    # TODO: Send commands to ESP32 here
-    # Example: requests.get(f"http://192.168.5.129/drive?lw={left_wheel}&rw={right_wheel}")
-
-    print(
-        f"Drive command: {direction} at {speed}% -> lw={left_wheel}, rw={right_wheel}"
-    )
-
-    return jsonify(
-        {
-            "status": "success",
-            "direction": direction,
-            "speed": speed,
-            "wheels": {"left": left_wheel, "right": right_wheel},
-        }
-    )
-
-
-# Height control endpoints
-@app.route("/height/up")
-def height_up():
-    """Increase robot height"""
-    # TODO: Send height up command to ESP32
-    print("Height UP command received")
-
-    return jsonify(
-        {"status": "success", "action": "height_up", "command": "Q key pressed"}
-    )
-
-
-@app.route("/height/down")
-def height_down():
-    """Decrease robot height"""
-    # TODO: Send height down command to ESP32
-    print("Height DOWN command received")
-
-    return jsonify(
-        {"status": "success", "action": "height_down", "command": "E key pressed"}
-    )
-
-
 if __name__ == "__main__":
-    socketio.run(app, debug=True, use_reloader=False, threaded=True)
+    app.run(debug=True, use_reloader=False, threaded=True)
