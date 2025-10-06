@@ -4,7 +4,10 @@ from flask import (
     Response,
     jsonify,
 )
+from flask_socketio import SocketIO, emit
 from datetime import datetime
+
+from sympy import threaded
 from camera import VideoCamera
 import numpy as np
 import cv2
@@ -12,16 +15,21 @@ import time
 import random
 
 from audio import audio_bp
+from drive import drive_bp
 import os
 
 VIDEO_URL = "http://192.168.95.98:82/video"
 AUDIO_URL = "http://192.168.107.98:82/audio"
+DRIVE_WS_URL = "ws://192.168.5.98:85/drive"
 
 camera = VideoCamera(0)
 app = Flask(__name__)
 app.config["AUDIO_URL"] = AUDIO_URL
 app.config["VIDEO_URL"] = VIDEO_URL
+app.config["DRIVE_WS_URL"] = DRIVE_WS_URL
+socketio = SocketIO(app)
 app.register_blueprint(audio_bp)
+app.register_blueprint(drive_bp)
 os.makedirs("screenshots", exist_ok=True)
 
 frame = None
@@ -274,5 +282,4 @@ def height_down():
 
 
 if __name__ == "__main__":
-    # app.run(host='0.0.0.0', port=5000, threaded=True)
-    app.run(debug=True, use_reloader=False)
+    socketio.run(app, debug=True, use_reloader=False, threaded=True)
