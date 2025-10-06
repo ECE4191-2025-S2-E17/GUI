@@ -11,6 +11,8 @@ from audio.constants import CLIP_SIZE, STEP_SIZE, TARGET_SAMPLING_RATE_HZ
 class AudioReader(threading.Thread):
     def __init__(self, audio_url: str, queue: queue.Queue) -> None:
         super().__init__(daemon=True)
+        if not audio_url:
+            raise ValueError("audio_url must be provided")
         self.buffer = np.array([], dtype="<i2")  # Fixed data type
         self.pyaudio_stream = pyaudio.PyAudio().open(
             format=pyaudio.paInt16,
@@ -68,7 +70,7 @@ if __name__ == "__main__":
     )
     data_queue = queue.Queue()
     audio_reader = AudioReader(
-        esp_ip="192.168.5.98", pyaudio_stream=stream, queue=data_queue
+        audio_url="http://192.168.5.98:82/audio", queue=data_queue
     )
     audio_reader.start()
 

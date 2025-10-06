@@ -10,15 +10,18 @@ import numpy as np
 import cv2
 import time
 import random
-#from audio import audio_bp
+
+from audio import audio_bp
 import os
 
-VIDEO_URL = 0
+VIDEO_URL = "http://192.168.95.98:82/video"
 AUDIO_URL = "http://192.168.107.98:82/audio"
 
-camera = VideoCamera(VIDEO_URL)
+camera = VideoCamera(0)
 app = Flask(__name__)
-#app.register_blueprint(audio_bp)
+app.config["AUDIO_URL"] = AUDIO_URL
+app.config["VIDEO_URL"] = VIDEO_URL
+app.register_blueprint(audio_bp)
 os.makedirs("screenshots", exist_ok=True)
 
 frame = None
@@ -90,6 +93,7 @@ def toggle_recording():
     camera.toggle_recording()
     return render_template("partials/record_button.html", recording=camera.recording)
 
+
 @app.route("/ai", methods=["POST"])
 def toggle_ai():
     camera.toggle_ai()
@@ -103,7 +107,7 @@ def get_status():
         "partials/status.html",
         recording=camera.recording,
         camera_connected=camera_connected,
-        ai_on = camera.ai_on
+        ai_on=camera.ai_on,
     )
 
 
@@ -115,7 +119,7 @@ def get_sightings():
 
     sightings_html = ""
     for detection in reversed(detections[-4:]):  # Show last 4 detections
-        dt = datetime.fromtimestamp(detection['timestamp'])
+        dt = datetime.fromtimestamp(detection["timestamp"])
         time_str = dt.strftime("%#I:%M")
         sightings_html += f"""
         <div style="border-bottom: 1px solid #333; padding: 5px 0;font-size: 0.8em;">
@@ -137,11 +141,11 @@ def robot_status():
     current_time = time.time()
     # TODO: Get actual wheel speeds from ESP32 or motor controllers
     # Example options:
-    
+
     # Option 1: If you have global variables tracking current motor commands
     # left_speed = current_left_motor_pwm  # Replace with your actual variable
     # right_speed = current_right_motor_pwm  # Replace with your actual variable
-    
+
     # Option 2: If you need to query ESP32 for current status
     # try:
     #     response = requests.get("http://192.168.5.129/status", timeout=1)
@@ -151,27 +155,26 @@ def robot_status():
     # except:
     #     left_speed = 0
     #     right_speed = 0
-    
+
     # Placeholder until you implement actual communication
     left_speed = 0
     right_speed = 0
 
     left_linear_speed = left_speed * wheel_radius  # m/s
     right_linear_speed = right_speed * wheel_radius  # m/s
-    
+
     # Simulate height variation (replace with actual sensor data)
     # Range: 70-120mm, default around 72mm
     height = 72 + int(10 * np.sin(current_time * 0.2))  # Varies between 62-82mm
     height = max(70, min(120, height))  # Clamp between 70-120mm
-    
-    return jsonify({
-        "wheels": {
-            "left": left_speed,
-            "right": right_speed
-        },
-        "height": height,
-        "timestamp": current_time
-    })
+
+    return jsonify(
+        {
+            "wheels": {"left": left_speed, "right": right_speed},
+            "height": height,
+            "timestamp": current_time,
+        }
+    )
 
 
 # Add new robot status endpoint for rover display
@@ -179,27 +182,29 @@ def robot_status():
 def robot_detailed_status():
     """Return detailed robot status for rover display"""
     current_time = time.time()
-    
+
     # TODO: Get actual data from ESP32
     # For now, use simulated data
-    
+
     # Simulate wheel speeds (in cm/s)
     left_wheel_speed = random.randint(0, 50) if random.random() > 0.7 else 0
     right_wheel_speed = random.randint(0, 50) if random.random() > 0.7 else 0
-    
+
     # Simulate height variation (replace with actual sensor data)
     # Range: 70-120mm, default around 72mm
     height = 72 + int(15 * np.sin(current_time * 0.1))  # Varies between 57-87mm
     height = max(70, min(120, height))  # Clamp between 70-120mm
-    
-    return jsonify({
-        "left_wheel_speed": left_wheel_speed,
-        "right_wheel_speed": right_wheel_speed,
-        "height": height,
-        "battery_level": random.randint(60, 100),  # Simulate battery
-        "connection_status": "connected",
-        "timestamp": current_time
-    })
+
+    return jsonify(
+        {
+            "left_wheel_speed": left_wheel_speed,
+            "right_wheel_speed": right_wheel_speed,
+            "height": height,
+            "battery_level": random.randint(60, 100),  # Simulate battery
+            "connection_status": "connected",
+            "timestamp": current_time,
+        }
+    )
 
 
 # Drive command endpoint to integrate with ESP32
@@ -207,14 +212,14 @@ def robot_detailed_status():
 def drive_command():
     """Handle drive commands and forward to ESP32"""
     from flask import request
-    
-    direction = request.args.get('direction', 'stop')
-    speed = int(request.args.get('speed', 0))
-    
+
+    direction = request.args.get("direction", "stop")
+    speed = int(request.args.get("speed", 0))
+
     # Convert to ESP32 wheel commands (lw, rw format)
     left_wheel = 0
     right_wheel = 0
-    
+
     if direction == "forward":
         left_wheel = speed
         right_wheel = speed
@@ -227,21 +232,22 @@ def drive_command():
     elif direction == "right":
         left_wheel = speed
         right_wheel = -speed
-    
+
     # TODO: Send commands to ESP32 here
     # Example: requests.get(f"http://192.168.5.129/drive?lw={left_wheel}&rw={right_wheel}")
-    
-    print(f"Drive command: {direction} at {speed}% -> lw={left_wheel}, rw={right_wheel}")
-    
-    return jsonify({
-        "status": "success",
-        "direction": direction,
-        "speed": speed,
-        "wheels": {
-            "left": left_wheel,
-            "right": right_wheel
+
+    print(
+        f"Drive command: {direction} at {speed}% -> lw={left_wheel}, rw={right_wheel}"
+    )
+
+    return jsonify(
+        {
+            "status": "success",
+            "direction": direction,
+            "speed": speed,
+            "wheels": {"left": left_wheel, "right": right_wheel},
         }
-    })
+    )
 
 
 # Height control endpoints
@@ -250,12 +256,10 @@ def height_up():
     """Increase robot height"""
     # TODO: Send height up command to ESP32
     print("Height UP command received")
-    
-    return jsonify({
-        "status": "success",
-        "action": "height_up",
-        "command": "Q key pressed"
-    })
+
+    return jsonify(
+        {"status": "success", "action": "height_up", "command": "Q key pressed"}
+    )
 
 
 @app.route("/height/down")
@@ -263,12 +267,10 @@ def height_down():
     """Decrease robot height"""
     # TODO: Send height down command to ESP32
     print("Height DOWN command received")
-    
-    return jsonify({
-        "status": "success",
-        "action": "height_down",
-        "command": "E key pressed"
-    })
+
+    return jsonify(
+        {"status": "success", "action": "height_down", "command": "E key pressed"}
+    )
 
 
 if __name__ == "__main__":
