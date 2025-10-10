@@ -33,6 +33,8 @@ class VideoCamera:
         self.latest_detections = []
         self.frame_since_last_detection = 0
 
+        self.manual_classification = True 
+
         # Frame queue for async recording
         self.record_queue = Queue(maxsize=100)
         self.record_thread = None
@@ -152,7 +154,7 @@ class VideoCamera:
                 s for s in self.latest_detections if current_time - s['timestamp'] < MAX_AGE
             ]
 
-            if results and len(results) > 0:
+            if results and len(results) > 0 and not self.manual_classification:
                 for r in results[0].boxes:
                     conf = float(r.conf.cpu().numpy()[0])
                     if conf > 0.7:  # confidence threshold
@@ -188,3 +190,38 @@ class VideoCamera:
             _, jpeg = cv2.imencode(".jpg", img)
 
         return jpeg.tobytes()
+    
+    def manual_classify(self, image):
+        """
+        Manually classify the given image (numpy array) using YOLO.
+        Returns a list of detections added.
+        """
+        results = self.model(image, verbose=False)
+        if not results or len(results) == 0:
+            return []
+
+        current_time = time.time()
+        detections_added = []
+
+        for r in results[0].boxes:
+            conf = float(r.conf.cpu().numpy()[0])
+            if conf > 0.7:
+                class_id = int(r.cls.cpu().numpy()[0])
+                class_name = (
+                    self.model.names[class_id]
+                    if class_id < len(self.model.names)
+                    else f"Class_{class_id}"
+                )
+                self.detections.append({
+                    "class_name": f"{animal_emojis[class_id]} {class_name}",
+                    "confidence": conf,
+                    "timestamp": current_time,
+                })
+                detections_added.append({
+                    "class_name": f"{animal_emojis[class_id]} {class_name}",
+                    "confidence": conf,
+                })
+
+        return detections_added
+
+        pass

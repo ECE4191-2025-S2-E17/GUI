@@ -82,6 +82,17 @@ def screenshot():
             timestamp = time.strftime("%Y-%m-%d_%H-%M-%S")
             filename = f"./screenshots/screenshot_{timestamp}.jpg"
             cv2.imwrite(filename, image)
+
+            if camera.manual_classification:
+                detections = camera.manual_classify(image)
+                if detections:
+                    det_text = "<br>".join(
+                        [f"{d['class_name']} (conf: {d['confidence']:.2f})" for d in detections]
+                    )
+                    return f"<p>Screenshot saved and classified:<br>{det_text}</p>"        
+                
+
+                
             return f"<p>Screenshot saved as {filename}</p>"
         else:
             return "<p>Failed to decode image data</p>"
