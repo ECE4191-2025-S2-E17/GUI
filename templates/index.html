@@ -51,169 +51,179 @@
     </div>
 
     <!-- Main content -->
-    <div class="main">
+    <div class="col_1">
+      <div class="box big">
+        <img class="video" src="{{ url_for('video_feed') }}" />
 
-      <div class="col_1">
-        <div class="box big">
-          <img class="video" src="{{ url_for('video_feed') }}" />
-
-          <div class="col_2">
-            <button class="img-btn" hx-post="/ai" hx-target="#ai-btn-content" hx-swap="innerHTML"
-              hx-indicator="#ai-loading">
-              <div id="ai-btn-content">
-                <img src="{{ url_for('static', filename='assets/ai-off-button.png') }}" alt="AI on">
-              </div>
-              <div id="ai-loading" class="htmx-indicator">📸</div>
-            </button>
-
-            <button class="img-btn" hx-post="/screenshot" hx-target="#status-content" hx-swap="innerHTML"
-              hx-indicator="#screenshot-loading">
-              <img src="{{ url_for('static', filename='assets/ss_button.png') }}" alt="Screenshot">
-              <div id="screenshot-loading" class="htmx-indicator">📸</div>
-            </button>
-
-            <button class="img-btn" hx-post="/record" hx-target="#record-btn-content" hx-swap="outerHTML"
-              hx-indicator="#record-loading">
-              <div id="record-btn-content">
-                <img src="{{ url_for('static', filename='assets/record_button.png') }}" alt="Record">
-              </div>
-              <div id="record-loading" class="htmx-indicator">🔄</div>
-            </button>
-
-            <button class="img-btn" hx-post="/audio/toggle" hx-target="#audio-toggle-content" hx-swap="outerHTML"
-              style="background: #333; color: white; border-radius: 10px; padding: 10px; font-size: 20px;">
-              <div id="audio-toggle-content">
-                ⏸️
-              </div>
-            </button>
-
-            <button class="img-btn" hx-post="/audio/clear_buffer" hx-target="#audio-clear-buffer-content"
-              hx-swap="outerHTML"
-              style="background: #333; color: white; border-radius: 10px; padding: 10px; font-size: 20px;">
-              <div id="audio-clear-buffer-content">
-                🔄
-              </div>
-            </button>
-          </div>
-        </div>
-        
-        <!-- Rover Status Display -->
-        <div class="rover-status-container">
-          <!-- Drive Speed Display -->
-          <div class="box rover-speed-box">
-            <h3>Drive Speed</h3>
-            <div class="rover-display">
-              <div class="wheel-speed left-wheels">
-                <div class="wheel-indicator">
-                  <div class="wheel front-left"></div>
-                  <span class="speed-text" id="left-front-speed">0 cm/s</span>
-                </div>
-                <div class="wheel-indicator">
-                  <div class="wheel rear-left"></div>
-                  <span class="speed-text" id="left-rear-speed">0 cm/s</span>
-                </div>
-              </div>
-              
-              <div class="rover-center">
-                <div class="rover-icon">
-                  <img src="{{ url_for('static', filename='assets/RoverTopview.png') }}" alt="Rover Top View" class="rover-image">
-                </div>
-              </div>
-              
-              <div class="wheel-speed right-wheels">
-                <div class="wheel-indicator">
-                  <div class="wheel front-right"></div>
-                  <span class="speed-text" id="right-front-speed">0 cm/s</span>
-                </div>
-                <div class="wheel-indicator">
-                  <div class="wheel rear-right"></div>
-                  <span class="speed-text" id="right-rear-speed">0 cm/s</span>
-                </div>
-              </div>
+        <div class="col_2">
+          <button class="img-btn" hx-post="/ai" hx-target="#ai-btn-content" hx-swap="innerHTML"
+            hx-indicator="#ai-loading">
+            <div id="ai-btn-content">
+              <img src="{{ url_for('static', filename='assets/ai-off-button.png') }}" alt="AI on">
             </div>
-          </div>
-          
-          <!-- Height Display -->
-          <div class="box rover-height-box">
-            <h3>Robot Height</h3>
-            <div class="height-display">
-              <div class="height-bar-container">
-                <div class="height-labels">
-                  <span class="max-height">120mm</span>
-                  <span class="min-height">70mm</span>
-                </div>
-                <div class="height-bar">
-                  <div class="height-fill" id="height-fill"></div>
-                  <div class="height-indicator" id="height-indicator"></div>
-                </div>
-              </div>
-              <div class="height-value">
-                <span class="height-number" id="height-number">72</span>
-                <span class="height-unit">mm</span>
-              </div>
+            <div id="ai-loading" class="htmx-indicator">📸</div>
+          </button>
+
+          <button class="img-btn" hx-post="/screenshot" hx-target="#status-content" hx-swap="innerHTML"
+            hx-indicator="#screenshot-loading">
+            <img src="{{ url_for('static', filename='assets/ss_button.png') }}" alt="Screenshot">
+            <div id="screenshot-loading" class="htmx-indicator">📸</div>
+          </button>
+
+          <button class="img-btn" hx-post="/record" hx-target="#record-btn-content" hx-swap="outerHTML"
+            hx-indicator="#record-loading">
+            <div id="record-btn-content">
+              <img src="{{ url_for('static', filename='assets/record_button.png') }}" alt="Record">
             </div>
-          </div>
+            <div id="record-loading" class="htmx-indicator">🔄</div>
+          </button>
+
+          <button class="img-btn" hx-post="/audio/toggle" hx-target="#audio-toggle-content" hx-swap="outerHTML"
+            style="background: #333; color: white; border-radius: 10px; padding: 10px; font-size: 20px;">
+            <div id="audio-toggle-content">
+              ⏸️
+            </div>
+          </button>
+
+          <button class="img-btn" hx-post="/audio/clear_buffer" hx-target="#audio-clear-buffer-content"
+            hx-swap="outerHTML"
+            style="background: #333; color: white; border-radius: 10px; padding: 10px; font-size: 20px;">
+            <div id="audio-clear-buffer-content">
+              🔄
+            </div>
+          </button>
         </div>
       </div>
 
+      <!-- Rover Status Display -->
+      <div class="rover-status-container">
+        <!-- Drive Speed Display -->
+        <div class="box rover-speed-box">
+          <h3>Drive Speed</h3>
 
+          <!-- Linear and Angular Speed Display -->
+          <div class="speed-controls-display">
+            <div class="speed-indicator">
+              <span class="speed-label">Linear</span>
+              <span class="speed-value" id="linear-speed-display">0</span>
+            </div>
+            <div class="speed-indicator">
+              <span class="speed-label">Angular</span>
+              <span class="speed-value" id="angular-speed-display">0</span>
+            </div>
+          </div>
 
-      <div class="col_3">
-        <div class="box status-box" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
-          <div id="status-content" hx-get="/status" hx-trigger="load, every 1s" hx-swap="innerHTML">
-            Loading status...
-          </div>
-        </div>
-        <div class="box sightings-box">
-          <h2>Visual Sightings</h2>
-          <div id="sightings-content" hx-get="/sightings" hx-trigger="load, every 2s" hx-swap="innerHTML">
-            Loading sightings...
-          </div>
-        </div>
-        <div class="box audio-box">
-          <h2>Audio Sightings</h2>
-          <div id="audio-sightings-content" hx-get="/audio/sightings" hx-trigger="load" hx-swap="innerHTML">
-            Loading audio classifications...
-          </div>
-        </div>
-        <div class="box controls-box">
-          <div class="keyboard-section">
-              <div class="row">
-                <div class="key" id="key-w">W</div>
+          <div class="rover-display">
+            <div class="wheel-speed left-wheels">
+              <div class="wheel-indicator">
+                <div class="wheel front-left"></div>
+                <span class="speed-text" id="left-front-speed">0 cm/s</span>
               </div>
-              <div class="row">
-                <div class="key" id="key-a">A</div>
-                <div class="key" id="key-s">S</div>
-                <div class="key" id="key-d">D</div>
+              <div class="wheel-indicator">
+                <div class="wheel rear-left"></div>
+                <span class="speed-text" id="left-rear-speed">0 cm/s</span>
               </div>
-              <h3>Movement</h3>
             </div>
 
-            <!-- Arrow keys -->
-            <div class="keyboard-section">
-              <div class="row">
-                <div class="key" id="key-up">↑</div>
+            <div class="rover-center">
+              <div class="rover-icon">
+                <img src="{{ url_for('static', filename='assets/RoverTopview.png') }}" alt="Rover Top View"
+                  class="rover-image">
               </div>
-              <div class="row">
-                <div class="key" id="key-left">←</div>
-                <div class="key" id="key-down">↓</div>
-                <div class="key" id="key-right">→</div>
-              </div>
-              <h3>Gimbal</h3>
             </div>
 
-            <!-- Height controls -->
-            <div class="keyboard-section">
-              <div class="row">
-                <div class="key height-key" id="key-q">Q</div>
-                <div class="key height-key" id="key-e">E</div>
+            <div class="wheel-speed right-wheels">
+              <div class="wheel-indicator">
+                <div class="wheel front-right"></div>
+                <span class="speed-text" id="right-front-speed">0 cm/s</span>
               </div>
-              <h3>Height</h3>
+              <div class="wheel-indicator">
+                <div class="wheel rear-right"></div>
+                <span class="speed-text" id="right-rear-speed">0 cm/s</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Height Display -->
+        <div class="box rover-height-box">
+          <h3>Robot Height</h3>
+          <div class="height-display">
+            <div class="height-bar-container">
+              <div class="height-labels">
+                <span class="max-height">120mm</span>
+                <span class="min-height">70mm</span>
+              </div>
+              <div class="height-bar">
+                <div class="height-fill" id="height-fill"></div>
+                <div class="height-indicator" id="height-indicator"></div>
+              </div>
+            </div>
+            <div class="height-value">
+              <span class="height-number" id="height-number">72</span>
+              <span class="height-unit">mm</span>
             </div>
           </div>
         </div>
       </div>
     </div>
+    <div class="col_3">
+      <div class="box status-box"
+        style="display: flex; flex-direction: column; align-items: center; text-align: center;">
+        <div id="status-content" hx-get="/status" hx-trigger="load, every 1s" hx-swap="innerHTML">
+          Loading status...
+        </div>
+      </div>
+      <div class="box sightings-box">
+        <h2>Visual Sightings</h2>
+        <div id="sightings-content" hx-get="/sightings" hx-trigger="load, every 2s" hx-swap="innerHTML">
+          Loading sightings...
+        </div>
+      </div>
+      <div class="box audio-box">
+        <h2>Audio Sightings</h2>
+        <div id="audio-sightings-content" hx-get="/audio/sightings" hx-trigger="load" hx-swap="innerHTML">
+          Loading audio classifications...
+        </div>
+      </div>
+      <div class="box controls-box">
+        <div class="keyboard-section">
+          <div class="row">
+            <div class="key" id="key-w">W</div>
+          </div>
+          <div class="row">
+            <div class="key" id="key-a">A</div>
+            <div class="key" id="key-s">S</div>
+            <div class="key" id="key-d">D</div>
+          </div>
+          <h3>Movement</h3>
+        </div>
+
+        <!-- Arrow keys -->
+        <div class="keyboard-section">
+          <div class="row">
+            <div class="key" id="key-i">I</div>
+          </div>
+          <div class="row">
+            <div class="key" id="key-j">J</div>
+            <div class="key" id="key-k">K</div>
+            <div class="key" id="key-l">L</div>
+          </div>
+          <h3>Gimbal</h3>
+        </div>
+
+        <!-- Height controls -->
+        <div class="keyboard-section">
+          <div class="row">
+            <div class="key height-key" id="key-q">Q</div>
+            <div class="key height-key" id="key-e">E</div>
+          </div>
+          <h3>Height</h3>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
   </div>
 
 </body>
