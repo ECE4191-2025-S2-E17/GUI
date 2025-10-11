@@ -1,10 +1,10 @@
 // Direct WebSocket connection to ESP32 Motor Controller
-testing = true;
-const WS_URL = testing ? "wss://echo.websocket.org" : "ws://192.168.107.98:85";
+testing = false;
+const WS_URL = testing ? "wss://echo.websocket.org" : "ws://192.168.137.133:85";
 
 let socket = null;
-let linearSpeed = 0; // Forward/backward speed
-let angularSpeed = 0; // Turning speed
+let linearSpeed = 10; // Forward/backward speed
+let angularSpeed = 10; // Turning speed
 const SPEED_INCREMENT = 10;
 const MAX_SPEED = 100;
 const MIN_SPEED = -100;
@@ -146,9 +146,9 @@ function updateMovement() {
 
   // Apply angular speed when A or D is pressed
   if (keysPressed.a && !keysPressed.d) {
-    appliedAngular = -angularSpeed; // Turn left (negative angular)
+    appliedAngular = angularSpeed; // Turn left (negative angular)
   } else if (keysPressed.d && !keysPressed.a) {
-    appliedAngular = angularSpeed; // Turn right (positive angular)
+    appliedAngular = -angularSpeed; // Turn right (positive angular)
   }
 
   // Calculate and send wheel speeds
@@ -196,25 +196,25 @@ document.addEventListener("keydown", function (event) {
 
     // Arrow keys set base speed values
     case "ArrowUp":
-      highlightKey("key-up", true);
+      // highlightKey("key-up", true);
       // Increase base linear speed
       linearSpeed = Math.min(MAX_SPEED, linearSpeed + SPEED_INCREMENT);
       updateMovement(); // Reapply with new base speed
       break;
     case "ArrowDown":
-      highlightKey("key-down", true);
+      // highlightKey("key-down", true);
       // Decrease base linear speed
       linearSpeed = Math.max(0, linearSpeed - SPEED_INCREMENT);
       updateMovement(); // Reapply with new base speed
       break;
     case "ArrowLeft":
-      highlightKey("key-left", true);
+      // highlightKey("key-left", true);
       // Decrease base angular speed
       angularSpeed = Math.max(0, angularSpeed - SPEED_INCREMENT);
       updateMovement(); // Reapply with new base speed
       break;
     case "ArrowRight":
-      highlightKey("key-right", true);
+      // highlightKey("key-right", true);
       // Increase base angular speed
       angularSpeed = Math.min(MAX_SPEED, angularSpeed + SPEED_INCREMENT);
       updateMovement(); // Reapply with new base speed
@@ -235,20 +235,24 @@ document.addEventListener("keydown", function (event) {
     // Gimbal Pan - J/L keys
     case "j":
     case "J":
+      highlightKey("key-j", true);
       sendCommand("PAN:LEFT");
       break;
     case "l":
     case "L":
+      highlightKey("key-l", true);
       sendCommand("PAN:RIGHT");
       break;
 
     // Gimbal Tilt - I/K keys
     case "i":
     case "I":
+      highlightKey("key-i", true);
       sendCommand("TILT:UP");
       break;
     case "k":
     case "K":
+      highlightKey("key-k", true);
       sendCommand("TILT:DOWN");
       break;
 
@@ -286,16 +290,16 @@ document.addEventListener("keyup", function (event) {
 
     // Arrow keys - no action on release (speed is maintained)
     case "ArrowLeft":
-      highlightKey("key-left", false);
+      // highlightKey("key-left", false);
       break;
     case "ArrowRight":
-      highlightKey("key-right", false);
+      // highlightKey("key-right", false);
       break;
     case "ArrowUp":
-      highlightKey("key-up", false);
+      // highlightKey("key-up", false);
       break;
     case "ArrowDown":
-      highlightKey("key-down", false);
+      // highlightKey("key-down", false);
       break;
 
     // Suspension keys - stop on release
@@ -313,20 +317,24 @@ document.addEventListener("keyup", function (event) {
     // Gimbal Pan - stop on release
     case "j":
     case "J":
+      highlightKey("key-j", false);
       sendCommand("PAN:STOP");
       break;
     case "l":
     case "L":
+      highlightKey("key-l", false);
       sendCommand("PAN:STOP");
       break;
 
     // Gimbal Tilt - stop on release
     case "i":
     case "I":
+      highlightKey("key-i", false);
       sendCommand("TILT:STOP");
       break;
     case "k":
     case "K":
+      highlightKey("key-k", false);
       sendCommand("TILT:STOP");
       break;
 
@@ -403,7 +411,17 @@ function updateRoverSpeedDisplay() {
     appliedAngular = angularSpeed;
   }
 
-  // TODO: add display of control speeds to html
+  // Update linear and angular speed displays
+  const linearSpeedDisplay = document.getElementById("linear-speed-display");
+  const angularSpeedDisplay = document.getElementById("angular-speed-display");
+
+  if (linearSpeedDisplay) {
+    linearSpeedDisplay.textContent = linearSpeed;
+  }
+
+  if (angularSpeedDisplay) {
+    angularSpeedDisplay.textContent = angularSpeed;
+  }
 
   // Update debug info if element exists
   const debugInfo = document.getElementById("speed-debug");
