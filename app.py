@@ -12,17 +12,17 @@ import cv2
 import time
 import random
 
-from audio import audio_bp
+# from audio import audio_bp
 import os
 
-VIDEO_URL = "http://192.168.95.98:82/video"
-AUDIO_URL = "http://192.168.107.98:82/audio"
+VIDEO_URL = "http://192.168.137.133:81/stream"
+AUDIO_URL = "http://192.168.137.59:83/audio"
 
-camera = VideoCamera(0)
+camera = VideoCamera(VIDEO_URL)
 app = Flask(__name__)
 app.config["AUDIO_URL"] = AUDIO_URL
 app.config["VIDEO_URL"] = VIDEO_URL
-app.register_blueprint(audio_bp)
+# app.register_blueprint(audio_bp)
 os.makedirs("screenshots", exist_ok=True)
 
 frame = None
@@ -87,12 +87,13 @@ def screenshot():
                 detections = camera.manual_classify(image)
                 if detections:
                     det_text = "<br>".join(
-                        [f"{d['class_name']} (conf: {d['confidence']:.2f})" for d in detections]
+                        [
+                            f"{d['class_name']} (conf: {d['confidence']:.2f})"
+                            for d in detections
+                        ]
                     )
-                    return f"<p>Screenshot saved and classified:<br>{det_text}</p>"        
-                
+                    return f"<p>Screenshot saved and classified:<br>{det_text}</p>"
 
-                
             return f"<p>Screenshot saved as {filename}</p>"
         else:
             return "<p>Failed to decode image data</p>"
