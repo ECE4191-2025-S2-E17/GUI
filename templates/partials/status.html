@@ -1,21 +1,26 @@
-<div style="display: flex; justify-content: center; max-width: 600px; margin: auto; gap: 100%;">
+<div style="display: flex; justify-content: center; max-width: 600px; margin: auto; gap: 20px;">
   <div style="text-align: center; flex: 1; display: inline-block; line-height: 1;">
     {% if camera_connected %}
-      🟢
-      <div style="margin-top: 3px;">Camera</div>
+    🟢
+    <div style="margin-top: 3px;">Camera</div>
     {% else %}
-      ❌
-      <div style="margin-top: 3px;">Camera</div>
+    ❌
+    <div style="margin-top: 3px;">Camera</div>
     {% endif %}
   </div>
 
   <div style="text-align: center; flex: 1; display: inline-block; line-height: 1;">
     {% if ai_on %}
-      🟢
-      <div style="margin-top: 3px;">AI</div>
+    🟢
+    <div style="margin-top: 3px;">AI</div>
     {% else %}
-      ❌
-      <div style="margin-top: 3px;">AI</div>
+    ❌
+    <div style="margin-top: 3px;">AI</div>
     {% endif %}
+  </div>
+
+  <div style="text-align: center; flex: 1; display: inline-block; line-height: 1;" id="robot-status-container">
+    <span id="robot-status-icon">❌</span>
+    <div style="margin-top: 3px;">Robot</div>
   </div>
 </div>

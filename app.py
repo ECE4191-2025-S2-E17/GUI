@@ -15,8 +15,9 @@ import random
 # from audio import audio_bp
 import os
 
-VIDEO_URL = "http://192.168.137.133:81/stream"
-AUDIO_URL = "http://192.168.137.59:83/audio"
+ESP_IP = "192.168.137.90"
+VIDEO_URL = f"http://{ESP_IP}:81/stream"
+AUDIO_URL = f"http://{ESP_IP}:83/audio"
 
 camera = VideoCamera(VIDEO_URL)
 app = Flask(__name__)
@@ -37,6 +38,16 @@ with app.app_context():
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/env.js")
+def env_js():
+    js_content = f"""
+    window.env = {{
+        ESP_IP: "{ESP_IP}",
+    }};
+    """
+    return Response(js_content, mimetype="application/javascript")
 
 
 def generate_frames():

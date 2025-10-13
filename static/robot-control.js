@@ -1,6 +1,10 @@
 // Direct WebSocket connection to ESP32 Motor Controller
-testing = false;
-const WS_URL = testing ? "wss://echo.websocket.org" : "ws://192.168.137.133:85";
+ESP_IP = window.env.ESP_IP;
+if (!ESP_IP) {
+  console.error("ESP_IP is not defined in environment variables.");
+  updateRobotStatus("❌", "No ESP_IP");
+}
+const WS_URL = `ws://${ESP_IP}:85`;
 
 let socket = null;
 let linearSpeed = 10; // Forward/backward speed
@@ -29,15 +33,18 @@ function initWebSocket() {
 
   socket.onopen = function () {
     console.log("Connected to ESP32 Motor Controller");
+    updateRobotStatus("🟢", "Connected");
   };
 
   socket.onclose = function () {
     console.log("Disconnected from ESP32. Reconnecting...");
+    updateRobotStatus("❌", "Disconnected");
     setTimeout(initWebSocket, 1000); // Reconnect after 2 seconds
   };
 
   socket.onerror = function (error) {
     console.error("WebSocket error:", error);
+    updateRobotStatus("❌", "Error");
   };
 
   socket.onmessage = function (event) {
@@ -441,3 +448,12 @@ document.addEventListener("DOMContentLoaded", function () {
     updateRoverSpeedDisplay(); // Shows current command speeds
   }, 100);
 });
+
+// Update robot status indicator in the status partial
+function updateRobotStatus(icon, status) {
+  const robotStatusIcon = document.getElementById("robot-status-icon");
+  if (robotStatusIcon) {
+    robotStatusIcon.textContent = icon;
+    robotStatusIcon.title = status; // Add tooltip with status text
+  }
+}
