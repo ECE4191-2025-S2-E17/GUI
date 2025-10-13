@@ -1,12 +1,11 @@
+from ctypes import cast
 import threading
 import queue
 import torch
-from torch.nn.functional import softmax
-from audio.models.epann import Cnn14_pruned as Epann
-from audio.models.temporal_classifier_model import AnimalSoundClassifierModule
+from audio.models.cnn_single_label_model import AnimalSoundClassifierModule
 from collections import deque
 from audio.constants import TARGET_SAMPLING_RATE_HZ, CLIP_SIZE
-from audio.audio_preprocessor import correct_sample
+from audio.audio_preprocess import correct_sample
 import noisereduce as nr
 
 
@@ -24,8 +23,6 @@ class AudioClassifier(threading.Thread):
         self.running = False
         self.input_queue = input_queue
         self.result_queue = result_queue
-        self.embedding_buffer_size = buffer_size
-        self.embedding_buffer = deque()
         self.classifying = True
 
     def pause(self):
@@ -33,14 +30,6 @@ class AudioClassifier(threading.Thread):
 
     def resume(self):
         self.classifying = True
-
-    def clear_buffer(self):
-        self.embedding_buffer.clear()
-
-    def change_buffer_size(self, new_size: int):
-        self.embedding_buffer_size = new_size
-        while len(self.embedding_buffer) > new_size:
-            self.embedding_buffer.popleft()
 
     def stop(self):
         self.running = False
@@ -50,55 +39,50 @@ class AudioClassifier(threading.Thread):
         while self.running:
             audio_chunk = self.input_queue.get()
             if not self.classifying:
-                self.clear_buffer()
                 continue
             # convert audio_chunk to float
             audio_chunk = audio_chunk / 32768.0
             if audio_chunk is None:
                 break
-            # audio_chunk = nr.reduce_noise(
-            #     y=audio_chunk,
-            #     sr=TARGET_SAMPLING_RATE_HZ,
-            #     stationary=True,
-            #     prop_decrease=0.7,
-            #     n_fft=512,
-            #     n_std_thresh_stationary=1.3,
-            #     chunk_size=CLIP_SIZE,
-            # )
+            audio_chunk = nr.reduce_noise(
+                y=audio_chunk,
+                sr=TARGET_SAMPLING_RATE_HZ,
+                stationary=True,
+                prop_decrease=0.7,
+                n_fft=512,
+                n_std_thresh_stationary=1.3,
+                chunk_size=CLIP_SIZE,
+            )
             audio_chunk = correct_sample(
                 audio_chunk, TARGET_SAMPLING_RATE_HZ, TARGET_SAMPLING_RATE_HZ, CLIP_SIZE
             )
             with torch.no_grad():
-                embeddings = self.embedding_model(
-                    audio_chunk.unsqueeze(0).to(self.device)
-                )["embedding"]
-                self.embedding_buffer.append(embeddings)
-                if len(self.embedding_buffer) >= self.embedding_buffer_size:
-                    self.embedding_buffer.popleft()
-                else:
-                    continue
+                # logits are alreaady softmaxed in the model
                 logits = self.classification_model(
-                    torch.vstack(list(self.embedding_buffer))
-                    .unsqueeze(0)
-                    .to(self.device),
-                    torch.Tensor([len(self.embedding_buffer)]),
+                    torch.Tensor(audio_chunk),
                 )
-                confidences = softmax(logits, dim=1)
-            self.result_queue.put(confidences)
+            self.result_queue.put(logits)
 
     def init_models(self):
-        self.classification_model = AnimalSoundClassifierModule.load_from_checkpoint(
-            checkpoint_path="./audio/models/final_model_rnn.ckpt"
+        self.classification_model = AnimalSoundClassifierModule(
+            load_original_pann=False,
+            freeze_base=True,
+            pretrained_model_path="",
+        )
+        self.classification_model.load_state_dict(
+            torch.load(
+                "audio/models/single_label_classifier.pth", map_location=self.device
+            )
         )
         self.classification_model.to(self.device)
         self.classification_model.eval()
-        self.embedding_model = Epann(
-            pre_trained=True, sample_rate=TARGET_SAMPLING_RATE_HZ
-        ).to(self.device)
-        self.embedding_model.eval()
 
-    def get_result(self, confidences: torch.Tensor):
+    def get_result(
+        self, confidences: torch.Tensor, threshold: float = 0.5
+    ) -> dict | None:
         confidences = confidences.squeeze(0).cpu()
-        pred = confidences.argmax().item()
-        cls_name = self.classification_model.CLASS_NAMES[pred]
+        pred = int(torch.argmax(confidences).item())
+        cls_name = self.classification_model.get_class_name(pred)
+        if confidences[pred].item() < threshold:
+            return None
         return {"name": cls_name, "confidence": confidences[pred].item()}

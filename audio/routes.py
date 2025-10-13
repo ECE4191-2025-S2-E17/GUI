@@ -20,13 +20,6 @@ def toggle_audio():
 
     return render_template("partials/audio_toggle.html", playing=audio_playing)
 
-
-@audio_bp.route("/clear_buffer", methods=["POST"])
-def clear_buffer():
-    audio_classifier.clear_buffer()
-    return '<div id="audio-clear-buffer-content">🔄</div>'
-
-
 @audio_bp.route("/sightings")
 def get_audio_sightings():
     # Get the latest audio classification results

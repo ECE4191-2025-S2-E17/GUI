@@ -7,7 +7,7 @@ Note that this prepares data for model inferencing, NOT playing
 """
 
 
-def normalize(data: torch.Tensor, mean: float = 0.00004, std: float = 0.053894):
+def normalize(data: torch.Tensor, mean: float = 0.000011, std: float = 0.002872):
     normalized_data = (data - mean) / std
     return normalized_data
 
@@ -43,7 +43,6 @@ def pad_or_truncate(waveform, target_length):
 
 
 def correct_sample(waveform, current_rate, target_rate, target_length=None):
-    waveform = torch.Tensor(waveform)
     waveform = resample_audio(waveform, current_rate, target_rate)
     waveform = convert_to_mono(waveform)
     waveform = normalize(waveform)

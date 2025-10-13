@@ -3,13 +3,20 @@ import queue
 import requests
 import numpy as np
 import pyaudio
+import time
 
 from audio.constants import CLIP_SIZE, STEP_SIZE, TARGET_SAMPLING_RATE_HZ
 
 
 # Maybe offering audio cleaning here as well.
 class AudioReader(threading.Thread):
-    def __init__(self, audio_url: str, queue: queue.Queue) -> None:
+    def __init__(
+        self,
+        audio_url: str,
+        queue: queue.Queue,
+        max_retries: int = 5,
+        retry_delay: float = 2.0,
+    ) -> None:
         super().__init__(daemon=True)
         if not audio_url:
             raise ValueError("audio_url must be provided")
@@ -23,6 +30,9 @@ class AudioReader(threading.Thread):
         self.audio_url = audio_url
         self.running = False
         self.queue = queue
+        self.max_retries = max_retries
+        self.retry_delay = retry_delay
+        self.retry_count = 0
 
     def stop(self):
         self.running = False
@@ -37,29 +47,54 @@ class AudioReader(threading.Thread):
 
     def run(self):
         self.running = True
-        try:
-            with requests.get(self.audio_url, stream=True, timeout=10) as response:
-                response.raise_for_status()
-                for chunk in response.iter_content(chunk_size=4096):
-                    if not self.running:
-                        return
 
-                    sample_32 = np.frombuffer(chunk, dtype="<i4")
-                    sample_24 = sample_32 >> 8
-                    sample_16 = (sample_24 >> 8).astype(np.int16)
+        while self.running and self.retry_count <= self.max_retries:
+            try:
+                print(
+                    f"Connecting to audio stream: {self.audio_url} (attempt {self.retry_count + 1}/{self.max_retries + 1})"
+                )
+                with requests.get(self.audio_url, stream=True, timeout=10) as response:
+                    response.raise_for_status()
+                    print(f"Successfully connected to audio stream: {self.audio_url}")
+                    self.retry_count = 0  # Reset retry count on successful connection
 
-                    self.buffer = np.concatenate((self.buffer, sample_16))
+                    # 10ms of audio at 32kHz, 32-bit int
+                    for chunk in response.iter_content(chunk_size=320):
+                        if not self.running:
+                            return
 
-                    if self.pyaudio_stream.is_active():
-                        self.pyaudio_stream.write(sample_16.tobytes())
-                    if self.buffer.size >= CLIP_SIZE:
-                        self.queue.put(self.buffer[:CLIP_SIZE])
-                        self.buffer = self.buffer[STEP_SIZE:]
+                        sample_32 = np.frombuffer(chunk, dtype="<i4")
+                        sample_24 = sample_32 >> 8
+                        sample_16 = (sample_24 >> 8).astype(np.int16)
 
-        except requests.RequestException as e:
-            print(f"Error occurred: {e}")
-        finally:
-            self.running = False
+                        self.buffer = np.concatenate((self.buffer, sample_16))
+
+                        if self.pyaudio_stream.is_active():
+                            self.pyaudio_stream.write(sample_16.tobytes())
+                        if self.buffer.size >= CLIP_SIZE:
+                            self.queue.put(self.buffer[:CLIP_SIZE])
+                            self.buffer = self.buffer[STEP_SIZE:]
+
+            except requests.RequestException as e:
+                self.retry_count += 1
+                if self.retry_count <= self.max_retries:
+                    print(
+                        f"Audio stream error (attempt {self.retry_count}/{self.max_retries + 1}): {e}"
+                    )
+                    print(f"Retrying in {self.retry_delay} seconds...")
+                    if self.running:
+                        time.sleep(self.retry_delay)
+                else:
+                    print(
+                        f"Max retries ({self.max_retries}) exceeded. Stopping audio reader."
+                    )
+                    break
+            except Exception as e:
+                print(f"Unexpected error in audio reader: {e}")
+                break
+
+        self.running = False
+        print("Audio reader stopped")
 
 
 if __name__ == "__main__":
