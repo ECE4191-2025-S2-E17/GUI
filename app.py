@@ -15,11 +15,11 @@ import random
 # from audio import audio_bp
 import os
 
-ESP_IP = "192.168.137.90"
+ESP_IP = "192.168.137.25"
 VIDEO_URL = f"http://{ESP_IP}:81/stream"
 AUDIO_URL = f"http://{ESP_IP}:83/audio"
 
-camera = VideoCamera(VIDEO_URL)
+camera = VideoCamera(VIDEO_URL, ESP_IP)
 app = Flask(__name__)
 app.config["AUDIO_URL"] = AUDIO_URL
 app.config["VIDEO_URL"] = VIDEO_URL

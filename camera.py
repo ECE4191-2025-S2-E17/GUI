@@ -5,6 +5,7 @@ import threading
 import numpy as np
 from queue import Queue
 from ultralytics import YOLO
+import requests
 
 os.makedirs("recordings", exist_ok=True)
 animal_emojis = {
@@ -16,14 +17,17 @@ animal_emojis = {
     5: "🦆",  # Platypus (no platypus emoji, use duck or similar)
     6: "😈",  # Tasdevil (no emoji, using devil face as playful substitute)
     7: "🐻‍❄️",  # Wombat (no wombat emoji, using bear as closest)
+    8: 'a',
+    9: 'b'
 }
 
 
 class VideoCamera:
     FRAME_PER_CLASSIFICATION = 1
 
-    def __init__(self, source=0):
+    def __init__(self, source=0, esp_ip=None):
         self.source = source
+        self.ESP_IP = esp_ip
         # Initialise model
         self.model = YOLO("best.pt", verbose=False)
         self.ai_on = False
@@ -93,8 +97,10 @@ class VideoCamera:
 
     def connect(self):
         try:
+            requests.get(f"http://{self.ESP_IP}/control?var=framesize&val=10")
             self.last_connection_attempt = time.time()
             video = cv2.VideoCapture(self.source)
+
 
             # Set timeout for network streams (in milliseconds)
             if isinstance(self.source, str) and (
