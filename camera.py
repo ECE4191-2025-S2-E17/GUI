@@ -25,11 +25,12 @@ animal_emojis = {
 class VideoCamera:
     FRAME_PER_CLASSIFICATION = 1
 
-    def __init__(self, source=0, esp_ip=None):
+    def __init__(self, source=0, model_path="best.pt", greyscale=False, esp_ip=None):
         self.source = source
         self.ESP_IP = esp_ip
         # Initialise model
-        self.model = YOLO("best.pt", verbose=False)
+        self.greyscale = greyscale
+        self.model = YOLO(model_path, verbose=False)
         self.ai_on = False
         self.video = None  # Start with None, will connect on first frame request
         self.recording = False
@@ -83,22 +84,50 @@ class VideoCamera:
         """Start a background thread to connect to the camera"""
         if not self.connection_in_progress:
             self.connection_in_progress = True
-            connection_thread = threading.Thread(
-                target=self._connect_background, daemon=True
-            )
+            connection_thread = threading.Thread(target=self.connect, daemon=True)
             connection_thread.start()
 
-    def _connect_background(self):
-        """Background thread function to connect to camera"""
+    def _reconnect_sync(self):
+        """Synchronous reconnection - more reliable for immediate needs"""
+        # Clean up existing video object
+        if self.video:
+            try:
+                self.video.release()
+            except Exception as e:
+                print(f"Error releasing video capture: {e}")
+            finally:
+                self.video = None
+
+        # Force garbage collection
+        import gc
+
+        gc.collect()
+
+        # Update last attempt time
+        self.last_connection_attempt = time.time()
+
+        # Try to connect synchronously
         try:
-            self.connect()
-        finally:
-            self.connection_in_progress = False
+            print(f"Attempting synchronous reconnection to: {self.source}")
+            result = self.connect()
+            if result:
+                print("Synchronous reconnection successful")
+                return True
+            else:
+                print("Synchronous reconnection failed")
+                return False
+        except Exception as e:
+            print(f"Synchronous reconnection error: {e}")
+            return False
 
     def connect(self):
         try:
             requests.get(f"http://{self.ESP_IP}/control?var=framesize&val=10")
             self.last_connection_attempt = time.time()
+
+            # Small delay to allow previous connection to fully close
+            time.sleep(0.5)
+
             video = cv2.VideoCapture(self.source)
 
 
@@ -106,8 +135,10 @@ class VideoCamera:
             if isinstance(self.source, str) and (
                 self.source.startswith("http") or self.source.startswith("rtsp")
             ):
-                video.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 3000)  # 3 second timeout
-                video.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, 3000)
+                video.set(cv2.CAP_PROP_OPEN_TIMEOUT_MSEC, 5000)  # 5 second timeout
+                video.set(cv2.CAP_PROP_READ_TIMEOUT_MSEC, 5000)
+                # Additional buffer settings for MJPEG streams
+                video.set(cv2.CAP_PROP_BUFFERSIZE, 1)
 
             if not video.isOpened():
                 print(f"✗ Failed to open video source: {self.source}")
@@ -134,12 +165,20 @@ class VideoCamera:
             return False
 
         print(f"Scheduling reconnection to video source...")
+
+        # Properly clean up existing video object
         if self.video:
             try:
                 self.video.release()
+            except Exception as e:
+                print(f"Error releasing video capture: {e}")
+            finally:
                 self.video = None
-            except:
-                pass
+
+        # Force garbage collection to clean up any lingering resources
+        import gc
+
+        gc.collect()
 
         # Start connection in background thread
         self._start_connection_thread()
@@ -204,17 +243,25 @@ class VideoCamera:
 
     def get_frame(self):
         if not self.video or not self.video.isOpened():
-            # Try to reconnect (respects retry delay)
-            self.reconnect()
+            # Try synchronous reconnection first (more reliable for page refreshes)
+            current_time = time.time()
+            if (
+                current_time - self.last_connection_attempt
+                >= self.connection_retry_delay
+            ):
+                print("Video disconnected, attempting immediate reconnection...")
+                self._reconnect_sync()
 
-            # If still not connected, return placeholder frame
+            # If still not connected after sync reconnection, return placeholder
             if not self.video or not self.video.isOpened():
                 return self._get_placeholder_frame()
 
         try:
             success, image = self.video.read()
+            # print(image.shape)
             if not success:
-                self.reconnect()
+                print("Failed to read frame, attempting reconnection...")
+                self._reconnect_sync()
                 if not self.video or not self.video.isOpened():
                     return self._get_placeholder_frame()
 
@@ -223,6 +270,7 @@ class VideoCamera:
                     return self._get_placeholder_frame()
         except Exception as e:
             print(f"Error reading frame: {e}")
+            self._reconnect_sync()
             return self._get_placeholder_frame()
 
         # Rotate frame 90 degrees clockwise
@@ -241,8 +289,11 @@ class VideoCamera:
             if self.frame_since_last_detection < self.FRAME_PER_CLASSIFICATION:
                 return jpeg.tobytes()
             self.frame_since_last_detection = 0
-
-            results = self.model(image, verbose=False)
+            if self.greyscale:
+                gs = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+                results = self.model(gs, verbose=False)
+            else:
+                results = self.model(image, verbose=False)
 
             # --- Deduplicated detections ---
             MAX_AGE = 5  # seconds to keep a detection alive

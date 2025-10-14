@@ -15,11 +15,15 @@ import random
 # from audio import audio_bp
 import os
 
-ESP_IP = "192.168.137.25"
+ESP_IP = "192.168.137.45"
 VIDEO_URL = f"http://{ESP_IP}:81/stream"
 AUDIO_URL = f"http://{ESP_IP}:83/audio"
+MODEL_PATH = "./yolo_models/small-color.pt"
+IS_MODEL_GREYSCALE = False
 
-camera = VideoCamera(VIDEO_URL, ESP_IP)
+camera = VideoCamera(
+    VIDEO_URL, esp_ip=ESP_IP, model_path=MODEL_PATH, greyscale=IS_MODEL_GREYSCALE
+)
 app = Flask(__name__)
 app.config["AUDIO_URL"] = AUDIO_URL
 app.config["VIDEO_URL"] = VIDEO_URL
