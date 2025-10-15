@@ -7,3 +7,4 @@ screenshot.jpg
 /screenshots/*
 /audio_recordings/*
 audio_results.txt
+audio_results_summary.json
