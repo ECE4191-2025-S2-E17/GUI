@@ -33,6 +33,22 @@
     .img-btn {
       position: relative;
     }
+
+    /* Timer styling */
+    #timer {
+    display: block;
+    margin: 0 auto 25px auto; 
+    text-align: center;
+    color: #4CAF50;
+    font-size: 30px;
+    font-weight: bold;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 2px solid #4CAF50;
+    width: fit-content;
+}
+
+
   </style>
 </head>
 
@@ -41,6 +57,12 @@
   <div class="app three-column-layout">
     <!-- LEFT COLUMN: Camera controls, Height, Speed -->
     <div class="left-column">
+      
+      <div id="timer-box">
+        <span id="timer">00:00</span>
+      </div>
+
+
       <!-- Camera Tuning Controls -->
       <div class="box camera-controls-box">
         <h4>Camera Tuning</h4>
@@ -231,6 +253,16 @@
 </body>
 <script src="/env.js"></script>
 <script src="{{ url_for('static', filename='robot-control.js') }}"></script>
+<script>
+  let seconds = 0;
+  const timer = document.getElementById("timer");
+  setInterval(() => {
+    seconds++;
+    const mins = String(Math.floor(seconds / 60)).padStart(2, '0');
+    const secs = String(seconds % 60).padStart(2, '0');
+    timer.textContent = `${mins}:${secs}`;
+  }, 1000);
+</script>
 
 
 </html>
