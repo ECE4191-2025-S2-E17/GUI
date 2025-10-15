@@ -69,6 +69,34 @@ body {
     overflow: hidden;
 }
 
+.camera-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: rgba(0,0,0,0.6);
+    border-radius: 8px;
+    padding: 8px;
+    color: #ddd;
+    width: 220px;
+    margin-right: 12px;
+}
+
+.camera-controls h4 {
+    margin: 0 0 6px 0;
+    font-size: 14px;
+    color: #4CAF50;
+}
+
+.camera-controls .control-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.camera-controls label { width: 90px; font-size: 12px; }
+.camera-controls input[type="range"] { flex: 1; }
+.camera-controls span { width: 28px; text-align: center; font-weight: bold; }
+
 .box h2 {
     margin-top: 0;
 }

@@ -65,6 +65,30 @@ function initWebSocket() {
   };
 }
 
+// Helper to send control request to ESP32 camera control endpoint
+function cameraControl(varName, val) {
+  // Update visible value next to slider
+  const span = document.getElementById(`${varName}-val`);
+  if (span) span.textContent = val;
+
+  if (!window.env || !window.env.ESP_IP) {
+    console.error("ESP_IP not available for cameraControl");
+    return;
+  }
+
+  const url = `http://${window.env.ESP_IP}/control?var=${encodeURIComponent(
+    varName
+  )}&val=${encodeURIComponent(val)}`;
+  // Use fetch so it's asynchronous and doesn't block UI
+  fetch(url)
+    .then((resp) => {
+      if (!resp.ok) {
+        console.error("Camera control failed", resp.status);
+      }
+    })
+    .catch((err) => console.error("Camera control error", err));
+}
+
 // Parse DATA messages from STM32
 function handleDataMessage(message) {
   // Remove "DATA: " prefix

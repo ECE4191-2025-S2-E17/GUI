@@ -55,6 +55,35 @@
       <div class="box big">
         <img class="video" src="{{ url_for('video_feed') }}" />
 
+        <!-- Left-side camera tuning controls -->
+        <div class="camera-controls">
+          <h4>Camera Tuning</h4>
+          <div class="control-row">
+            <label for="framesize">Frame Size</label>
+            <input id="framesize" type="range" min="0" max="10" value="4"
+              oninput="cameraControl('framesize', this.value)">
+            <span id="framesize-val">4</span>
+          </div>
+          <div class="control-row">
+            <label for="quality">Quality</label>
+            <input id="quality" type="range" min="10" max="63" value="10"
+              oninput="cameraControl('quality', this.value)">
+            <span id="quality-val">10</span>
+          </div>
+          <div class="control-row">
+            <label for="brightness">Brightness</label>
+            <input id="brightness" type="range" min="-2" max="2" value="0" step="1"
+              oninput="cameraControl('brightness', this.value)">
+            <span id="brightness-val">0</span>
+          </div>
+          <div class="control-row">
+            <label for="contrast">Contrast</label>
+            <input id="contrast" type="range" min="-2" max="2" value="0" step="1"
+              oninput="cameraControl('contrast', this.value)">
+            <span id="contrast-val">0</span>
+          </div>
+        </div>
+
         <div class="col_2">
           <button class="img-btn" hx-post="/ai" hx-target="#ai-btn-content" hx-swap="innerHTML"
             hx-indicator="#ai-loading">
