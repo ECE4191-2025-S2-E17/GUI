@@ -36,6 +36,8 @@ def get_audio_sightings():
             timestamp = None
 
         result = audio_classifier.get_result(logits, timestamp=timestamp)
+        if result["name"] in ["Noise", "Water", "Nothing"]:
+            continue
         print(f"Audio classification result: {result}")
         audio_results.append(result)
         latest_results.append(result)

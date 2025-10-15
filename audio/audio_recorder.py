@@ -1,5 +1,6 @@
 import threading
 import queue
+from typing import Optional
 import numpy as np
 import wave
 import os
@@ -10,7 +11,12 @@ from audio.constants import TARGET_SAMPLING_RATE_HZ
 class AudioRecorder(threading.Thread):
     """Records audio chunks to a WAV file until stopped."""
 
-    def __init__(self, queue: queue.Queue, output_folder: str = "audio_recordings"):
+    def __init__(
+        self,
+        queue: queue.Queue,
+        output_folder: str = "audio_recordings",
+        output_file: Optional[str] = None,
+    ) -> None:
         super().__init__(daemon=True)
         self.queue = queue
         self.output_folder = output_folder
@@ -21,10 +27,13 @@ class AudioRecorder(threading.Thread):
         os.makedirs(self.output_folder, exist_ok=True)
 
         # Generate filename with timestamp
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.output_file: str = os.path.join(
-            self.output_folder, f"audio_recording_{timestamp}.wav"
-        )
+        if output_file:
+            self.output_file = os.path.join(self.output_folder, output_file)
+        else:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            self.output_file: str = os.path.join(
+                self.output_folder, f"audio_recording_{timestamp}.wav"
+            )
 
     def stop(self):
         """Stop recording and close the file."""
