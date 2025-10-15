@@ -14,7 +14,7 @@ import time
 
 import os
 
-ESP_IP = "192.168.137.50"
+ESP_IP = "192.168.137."
 VIDEO_URL = f"http://{ESP_IP}:81/stream"
 AUDIO_URL = f"http://{ESP_IP}:82/audio"
 MODEL_PATH = "./yolo_models/small-color.pt"
