@@ -7,6 +7,7 @@ from flask import (
 from datetime import datetime
 
 from camera import VideoCamera
+import json
 import numpy as np
 import cv2
 import time
@@ -15,14 +16,26 @@ import random
 # from audio import audio_bp
 import os
 
-ESP_IP = "192.168.137.45"
+ESP_IP = "192.168.137.108"
 VIDEO_URL = f"http://{ESP_IP}:81/stream"
 AUDIO_URL = f"http://{ESP_IP}:83/audio"
 MODEL_PATH = "./yolo_models/small-color.pt"
 IS_MODEL_GREYSCALE = False
 
+# Initial camera configuration to apply on startup and expose to frontend
+CAMERA_CONFIG = {
+    "framesize": 7, # VGA 640x480
+    "quality": 10, # the lower the better quality
+    "brightness": 0,
+    "contrast": 0,
+}
+
 camera = VideoCamera(
-    VIDEO_URL, esp_ip=ESP_IP, model_path=MODEL_PATH, greyscale=IS_MODEL_GREYSCALE
+    VIDEO_URL,
+    esp_ip=ESP_IP,
+    model_path=MODEL_PATH,
+    greyscale=IS_MODEL_GREYSCALE,
+    initial_camera_config=CAMERA_CONFIG,
 )
 app = Flask(__name__)
 app.config["AUDIO_URL"] = AUDIO_URL
@@ -46,11 +59,9 @@ def index():
 
 @app.route("/env.js")
 def env_js():
-    js_content = f"""
-    window.env = {{
-        ESP_IP: "{ESP_IP}",
-    }};
-    """
+    # Expose ESP IP and initial camera configuration to frontend JS
+    env = {"ESP_IP": ESP_IP, "camera_config": CAMERA_CONFIG}
+    js_content = f"window.env = {json.dumps(env)};"
     return Response(js_content, mimetype="application/javascript")
 
 

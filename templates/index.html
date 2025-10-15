@@ -40,7 +40,7 @@
 
   <div class="app">
     <!-- Sidebar -->
-    <div class="side">
+    <!-- <div class="side">
       <img src="{{ url_for('static', filename='assets/Monash_University_logo.svg') }}" alt="Button 1">
       <div class="sidebar">
         <div class="logo"></div>
@@ -48,13 +48,11 @@
         <div class="icon"></div>
         <div class="icon"></div>
       </div>
-    </div>
+    </div> -->
 
     <!-- Main content -->
     <div class="col_1">
       <div class="box big">
-        <img class="video" src="{{ url_for('video_feed') }}" />
-
         <!-- Left-side camera tuning controls -->
         <div class="camera-controls">
           <h4>Camera Tuning</h4>
@@ -83,7 +81,7 @@
             <span id="contrast-val">0</span>
           </div>
         </div>
-
+        <img class="video" src="{{ url_for('video_feed') }}" />
         <div class="col_2">
           <button class="img-btn" hx-post="/ai" hx-target="#ai-btn-content" hx-swap="innerHTML"
             hx-indicator="#ai-loading">

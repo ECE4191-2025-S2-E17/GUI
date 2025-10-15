@@ -467,6 +467,23 @@ document.addEventListener("DOMContentLoaded", function () {
   updateHeightDisplay();
   updateRoverDisplay();
 
+  // Initialize camera tuning sliders from env if provided
+  if (window.env && window.env.camera_config) {
+    const cfg = window.env.camera_config;
+    Object.keys(cfg).forEach((k) => {
+      const el = document.getElementById(k);
+      const span = document.getElementById(`${k}-val`);
+      if (el) {
+        try {
+          el.value = cfg[k];
+        } catch (e) {
+          console.warn("Failed to set slider", k, e);
+        }
+      }
+      if (span) span.textContent = cfg[k];
+    });
+  }
+
   // Update command speed display periodically (user input feedback)
   setInterval(() => {
     updateRoverSpeedDisplay(); // Shows current command speeds

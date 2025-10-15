@@ -17,17 +17,25 @@ animal_emojis = {
     5: "🦆",  # Platypus (no platypus emoji, use duck or similar)
     6: "😈",  # Tasdevil (no emoji, using devil face as playful substitute)
     7: "🐻‍❄️",  # Wombat (no wombat emoji, using bear as closest)
-    8: 'a',
-    9: 'b'
+    8: "a",
+    9: "b",
 }
 
 
 class VideoCamera:
     FRAME_PER_CLASSIFICATION = 1
 
-    def __init__(self, source=0, model_path="best.pt", greyscale=False, esp_ip=None):
+    def __init__(
+        self,
+        source=0,
+        model_path="best.pt",
+        greyscale=False,
+        esp_ip=None,
+        initial_camera_config=None,
+    ):
         self.source = source
         self.ESP_IP = esp_ip
+        self.initial_camera_config = initial_camera_config or {}
         # Initialise model
         self.greyscale = greyscale
         self.model = YOLO(model_path, verbose=False)
@@ -54,6 +62,42 @@ class VideoCamera:
         # Start initial connection attempt in background thread
         print(f"Starting background connection to video source: {source}")
         self._start_connection_thread()
+
+        # If there is an initial camera config and an ESP IP, attempt to apply it
+        if self.initial_camera_config and self.ESP_IP:
+            try:
+                t = threading.Thread(
+                    target=self._apply_initial_camera_config, daemon=True
+                )
+                t.start()
+            except Exception as e:
+                print(f"Failed to start initial camera config thread: {e}")
+
+    def _apply_initial_camera_config(self):
+        """Apply initial camera parameters to the ESP camera via its /control endpoint.
+
+        This runs in a background thread and will retry a few times with short timeouts.
+        """
+        for var, val in self.initial_camera_config.items():
+            url = f"http://{self.ESP_IP}/control?var={var}&val={val}"
+            attempts = 0
+            success = False
+            while attempts < 3 and not success:
+                attempts += 1
+                try:
+                    print(
+                        f"Applying initial camera config {var}={val} (attempt {attempts})"
+                    )
+                    resp = requests.get(url, timeout=2)
+                    if resp.status_code == 200:
+                        success = True
+                        print(f"Applied {var}={val}")
+                    else:
+                        print(f"Failed to apply {var}={val}, status {resp.status_code}")
+                except Exception as e:
+                    print(f"Error applying {var}={val}: {e}")
+                if not success:
+                    time.sleep(1)
 
     def _get_placeholder_frame(self):
         """Return a placeholder frame when camera is not available"""
@@ -129,7 +173,6 @@ class VideoCamera:
             time.sleep(0.5)
 
             video = cv2.VideoCapture(self.source)
-
 
             # Set timeout for network streams (in milliseconds)
             if isinstance(self.source, str) and (
@@ -289,12 +332,14 @@ class VideoCamera:
             if self.frame_since_last_detection < self.FRAME_PER_CLASSIFICATION:
                 return jpeg.tobytes()
             self.frame_since_last_detection = 0
-            if self.greyscale:
+            if image.shape[0] != 480 or image.shape[1] != 640:
+                image = cv2.resize(image, (480, 640))
+            if self.greyscale and image.shape[2] == 3:
                 gs = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
                 results = self.model(gs, verbose=False)
             else:
                 results = self.model(image, verbose=False)
-
+    
             # --- Deduplicated detections ---
             MAX_AGE = 5  # seconds to keep a detection alive
             IOU_THRESHOLD = 0.5  # overlap threshold to consider same object

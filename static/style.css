@@ -77,7 +77,7 @@ body {
     border-radius: 8px;
     padding: 8px;
     color: #ddd;
-    width: 220px;
+    width: 100px;
     margin-right: 12px;
 }
 
@@ -93,9 +93,9 @@ body {
     gap: 8px;
 }
 
-.camera-controls label { width: 90px; font-size: 12px; }
+.camera-controls label { width: 60px; font-size: 12px; }
 .camera-controls input[type="range"] { flex: 1; }
-.camera-controls span { width: 28px; text-align: center; font-weight: bold; }
+.camera-controls span { width: 20px; text-align: center; font-weight: bold; }
 
 .box h2 {
     margin-top: 0;
@@ -197,9 +197,10 @@ body {
 }
 
 .video {
-    width: 85%;
+    max-width: 100%; 
     height: auto;
-    display: flex;
+    margin: 0 auto;
+    display: block;
     border-radius: 20px;
 }
 
