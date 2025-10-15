@@ -20,6 +20,7 @@ def toggle_audio():
 
     return render_template("partials/audio_toggle.html", playing=audio_playing)
 
+
 @audio_bp.route("/sightings")
 def get_audio_sightings():
     # Get the latest audio classification results
@@ -27,11 +28,12 @@ def get_audio_sightings():
     while not audio_classifier.result_queue.empty():
         result = audio_classifier.result_queue.get()
         result = audio_classifier.get_result(result)
+        print(f"Audio classification result: {result}")
         audio_results.append(result)
         latest_results.append(result)
 
-    # Get the most recent results (last 2)
-    recent_results = (latest_results + audio_results)[-2:]
+    # Get the most recent results (last 3)
+    recent_results = (latest_results + audio_results)[-3:]
 
     if not recent_results:
         return "<p>No audio classifications yet<br><small>Start audio streaming to see results</small></p>"

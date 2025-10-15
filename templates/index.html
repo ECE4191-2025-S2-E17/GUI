@@ -189,7 +189,7 @@
       </div>
       <div class="box audio-box">
         <h2>Audio Sightings</h2>
-        <div id="audio-sightings-content" hx-get="/audio/sightings" hx-trigger="load" hx-swap="innerHTML">
+        <div id="audio-sightings-content" hx-get="/audio/sightings" hx-trigger="load, every 1s" hx-swap="innerHTML">
           Loading audio classifications...
         </div>
       </div>

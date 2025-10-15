@@ -53,13 +53,15 @@ class AudioClassifier(threading.Thread):
                 n_std_thresh_stationary=1.3,
                 chunk_size=CLIP_SIZE,
             )
+            audio_chunk = torch.Tensor(audio_chunk).unsqueeze(0).to(self.device)
             audio_chunk = correct_sample(
                 audio_chunk, TARGET_SAMPLING_RATE_HZ, TARGET_SAMPLING_RATE_HZ, CLIP_SIZE
-            )
+            )  # shape (96000,)
             with torch.no_grad():
+                audio_chunk = audio_chunk.unsqueeze(0)  # shape (1, 96000)
                 # logits are alreaady softmaxed in the model
                 logits = self.classification_model(
-                    torch.Tensor(audio_chunk),
+                    audio_chunk,
                 )
             self.result_queue.put(logits)
 
@@ -77,12 +79,10 @@ class AudioClassifier(threading.Thread):
         self.classification_model.to(self.device)
         self.classification_model.eval()
 
-    def get_result(
-        self, confidences: torch.Tensor, threshold: float = 0.5
-    ) -> dict | None:
-        confidences = confidences.squeeze(0).cpu()
+    def get_result(self, confidences: torch.Tensor, threshold: float = 0.5) -> dict:
+        confidences = torch.exp(confidences.squeeze(0)).cpu()
         pred = int(torch.argmax(confidences).item())
         cls_name = self.classification_model.get_class_name(pred)
         if confidences[pred].item() < threshold:
-            return None
+            return {"name": "Nothing", "confidence": 1 - confidences[pred].item()}
         return {"name": cls_name, "confidence": confidences[pred].item()}
