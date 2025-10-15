@@ -26,8 +26,16 @@ def get_audio_sightings():
     # Get the latest audio classification results
     latest_results = []
     while not audio_classifier.result_queue.empty():
-        result = audio_classifier.result_queue.get()
-        result = audio_classifier.get_result(result)
+        queue_item = audio_classifier.result_queue.get()
+
+        # Handle both old format (just logits) and new format (logits, timestamp)
+        if isinstance(queue_item, tuple):
+            logits, timestamp = queue_item
+        else:
+            logits = queue_item
+            timestamp = None
+
+        result = audio_classifier.get_result(logits, timestamp=timestamp)
         print(f"Audio classification result: {result}")
         audio_results.append(result)
         latest_results.append(result)
@@ -42,9 +50,18 @@ def get_audio_sightings():
     for i, result in enumerate(recent_results):
         class_name = result.get("name", "Unknown")
         confidence = result.get("confidence", 0.0)
+        timestamp = result.get("timestamp", None)
+
+        timestamp_str = (
+            f"<small>Time: {timestamp:.1f}s</small><br>"
+            if timestamp is not None
+            else ""
+        )
+
         sightings_html += f"""
         <div style="border-bottom: 1px solid #333; padding: 5px 0; font-size: 0.8em;">
             <strong>🔊 {class_name}</strong><br>
+            {timestamp_str}
             <small>Confidence: {confidence:.2f}</small>
         </div>
         """

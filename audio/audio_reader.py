@@ -36,6 +36,10 @@ class AudioReader(threading.Thread):
         self.retry_delay = retry_delay
         self.retry_count = 0
 
+        # Timestamp tracking
+        self.recording_start_time = None
+        self.total_samples_processed = 0
+
     def stop(self):
         self.running = False
 
@@ -60,6 +64,11 @@ class AudioReader(threading.Thread):
                     print(f"Successfully connected to audio stream: {self.audio_url}")
                     self.retry_count = 0  # Reset retry count on successful connection
 
+                    # Initialize recording start time on first successful connection
+                    if self.recording_start_time is None:
+                        self.recording_start_time = time.time()
+                        self.total_samples_processed = 0
+
                     # 10ms of audio at 32kHz, 32-bit int
                     for chunk in response.iter_content(chunk_size=320):
                         if not self.running:
@@ -70,6 +79,7 @@ class AudioReader(threading.Thread):
                         sample_16 = (sample_24 >> 8).astype(np.int16)
 
                         self.buffer = np.concatenate((self.buffer, sample_16))
+                        self.total_samples_processed += len(sample_16)
 
                         if self.pyaudio_stream.is_active():
                             self.pyaudio_stream.write(sample_16.tobytes())
@@ -82,7 +92,17 @@ class AudioReader(threading.Thread):
                                 pass  # Skip if queue is full
 
                         if self.buffer.size >= CLIP_SIZE:
-                            self.queue.put(self.buffer[:CLIP_SIZE])
+                            # Calculate timestamp for this chunk (start time of the chunk)
+                            # The chunk starts at (total_samples - buffer_size) samples from recording start
+                            chunk_start_samples = (
+                                self.total_samples_processed - self.buffer.size
+                            )
+                            chunk_timestamp = (
+                                chunk_start_samples / TARGET_SAMPLING_RATE_HZ
+                            )
+
+                            # Put chunk with timestamp as tuple (audio_data, timestamp)
+                            self.queue.put((self.buffer[:CLIP_SIZE], chunk_timestamp))
                             self.buffer = self.buffer[STEP_SIZE:]
 
             except requests.RequestException as e:

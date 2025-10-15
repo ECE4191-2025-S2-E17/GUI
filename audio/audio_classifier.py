@@ -37,7 +37,15 @@ class AudioClassifier(threading.Thread):
     def run(self):
         self.running = True
         while self.running:
-            audio_chunk = self.input_queue.get()
+            queue_item = self.input_queue.get()
+
+            # Handle both old format (just audio_chunk) and new format (audio_chunk, timestamp)
+            if isinstance(queue_item, tuple):
+                audio_chunk, timestamp = queue_item
+            else:
+                audio_chunk = queue_item
+                timestamp = None
+
             if not self.classifying:
                 continue
             # convert audio_chunk to float
@@ -63,7 +71,8 @@ class AudioClassifier(threading.Thread):
                 logits = self.classification_model(
                     audio_chunk,
                 )
-            self.result_queue.put(logits)
+            # Pass timestamp along with logits
+            self.result_queue.put((logits, timestamp))
 
     def init_models(self):
         self.classification_model = AnimalSoundClassifierModule(
@@ -79,10 +88,27 @@ class AudioClassifier(threading.Thread):
         self.classification_model.to(self.device)
         self.classification_model.eval()
 
-    def get_result(self, confidences: torch.Tensor, threshold: float = 0.5) -> dict:
+    def get_result(
+        self,
+        confidences: torch.Tensor,
+        threshold: float = 0.5,
+        timestamp: float | None = None,
+    ) -> dict:
         confidences = torch.exp(confidences.squeeze(0)).cpu()
         pred = int(torch.argmax(confidences).item())
         cls_name = self.classification_model.get_class_name(pred)
-        if confidences[pred].item() < threshold:
-            return {"name": "Nothing", "confidence": 1 - confidences[pred].item()}
-        return {"name": cls_name, "confidence": confidences[pred].item()}
+
+        result = {
+            "name": cls_name if confidences[pred].item() >= threshold else "Nothing",
+            "confidence": (
+                confidences[pred].item()
+                if confidences[pred].item() >= threshold
+                else 1 - confidences[pred].item()
+            ),
+        }
+
+        # Add timestamp if provided
+        if timestamp is not None:
+            result["timestamp"] = timestamp
+
+        return result
