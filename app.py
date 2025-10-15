@@ -11,27 +11,25 @@ import json
 import numpy as np
 import cv2
 import time
-import random
 
-# from audio import audio_bp
 import os
 
-ESP_IP = "192.168.137.108"
+ESP_IP = "192.168.137.50"
 VIDEO_URL = f"http://{ESP_IP}:81/stream"
-AUDIO_URL = f"http://{ESP_IP}:83/audio"
+AUDIO_URL = f"http://{ESP_IP}:82/audio"
 MODEL_PATH = "./yolo_models/small-color.pt"
 IS_MODEL_GREYSCALE = False
 
 # Initial camera configuration to apply on startup and expose to frontend
 CAMERA_CONFIG = {
-    "framesize": 7, # VGA 640x480
-    "quality": 10, # the lower the better quality
+    "framesize": 7,  # VGA 640x480
+    "quality": 10,  # the lower the better quality
     "brightness": 0,
     "contrast": 0,
 }
 
 camera = VideoCamera(
-    VIDEO_URL,
+    VIDEO_URL,  # type: ignore
     esp_ip=ESP_IP,
     model_path=MODEL_PATH,
     greyscale=IS_MODEL_GREYSCALE,
@@ -40,7 +38,6 @@ camera = VideoCamera(
 app = Flask(__name__)
 app.config["AUDIO_URL"] = AUDIO_URL
 app.config["VIDEO_URL"] = VIDEO_URL
-# app.register_blueprint(audio_bp)
 os.makedirs("screenshots", exist_ok=True)
 
 frame = None
@@ -48,6 +45,9 @@ frame = None
 # Debug: Print registered routes
 with app.app_context():
     print("Registered routes:")
+    from audio import audio_bp
+
+    app.register_blueprint(audio_bp)
     for rule in app.url_map.iter_rules():
         print(f"  {rule.rule} -> {rule.endpoint}")
 

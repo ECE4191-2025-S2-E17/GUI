@@ -14,6 +14,7 @@ class AudioReader(threading.Thread):
         self,
         audio_url: str,
         queue: queue.Queue,
+        recording_queue: queue.Queue,
         max_retries: int = 5,
         retry_delay: float = 2.0,
     ) -> None:
@@ -30,6 +31,7 @@ class AudioReader(threading.Thread):
         self.audio_url = audio_url
         self.running = False
         self.queue = queue
+        self.recording_queue = recording_queue  # Optional queue for recording
         self.max_retries = max_retries
         self.retry_delay = retry_delay
         self.retry_count = 0
@@ -71,6 +73,14 @@ class AudioReader(threading.Thread):
 
                         if self.pyaudio_stream.is_active():
                             self.pyaudio_stream.write(sample_16.tobytes())
+
+                        # Send to recording queue if available
+                        if self.recording_queue is not None:
+                            try:
+                                self.recording_queue.put_nowait(sample_16)
+                            except queue.Full:
+                                pass  # Skip if queue is full
+
                         if self.buffer.size >= CLIP_SIZE:
                             self.queue.put(self.buffer[:CLIP_SIZE])
                             self.buffer = self.buffer[STEP_SIZE:]
@@ -100,30 +110,30 @@ class AudioReader(threading.Thread):
 if __name__ == "__main__":
     # Start audio reader thread
     p = pyaudio.PyAudio()
-    stream = p.open(
-        format=pyaudio.paInt16, channels=1, rate=TARGET_SAMPLING_RATE_HZ, output=True
-    )
-    data_queue = queue.Queue()
-    audio_reader = AudioReader(
-        audio_url="http://192.168.5.98:82/audio", queue=data_queue
-    )
-    audio_reader.start()
+    # stream = p.open(
+    #     format=pyaudio.paInt16, channels=1, rate=TARGET_SAMPLING_RATE_HZ, output=True
+    # )
+    # data_queue = queue.Queue()
+    # audio_reader = AudioReader(
+    #     audio_url="http://192.168.5.98:82/audio", queue=data_queue
+    # )
+    # audio_reader.start()
 
-    try:
-        while audio_reader.is_alive():
-            audio_reader.join(timeout=0.1)
+    # try:
+    #     while audio_reader.is_alive():
+    #         audio_reader.join(timeout=0.1)
 
-    except KeyboardInterrupt:
-        print("Stopping audio reader...")
-        audio_reader.stop()
-        audio_reader.join(timeout=2)
-    finally:
-        # from matplotlib import pyplot as plt
-        # if not data_queue.empty():
-        #     data = data_queue.get()
-        #     plt.plot(data)
-        # plt.show()
-        stream.stop_stream()
-        stream.close()
-        p.terminate()
-        print("Cleanup completed")
+    # except KeyboardInterrupt:
+    #     print("Stopping audio reader...")
+    #     audio_reader.stop()
+    #     audio_reader.join(timeout=2)
+    # finally:
+    #     # from matplotlib import pyplot as plt
+    #     # if not data_queue.empty():
+    #     #     data = data_queue.get()
+    #     #     plt.plot(data)
+    #     # plt.show()
+    #     stream.stop_stream()
+    #     stream.close()
+    #     p.terminate()
+    #     print("Cleanup completed")

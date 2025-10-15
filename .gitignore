@@ -5,3 +5,5 @@ screenshot.jpg
 *.pt
 *.ckpt
 /screenshots/*
+/audio_recordings/*
+audio_results.txt
