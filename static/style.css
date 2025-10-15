@@ -9,8 +9,39 @@ body {
 .app {
     display: flex;
     height: 100vh;
-    padding: 15px; /* Reduced padding */
+    padding: 15px;
     box-sizing: border-box;
+}
+
+/* Three-column layout */
+.three-column-layout {
+    display: flex;
+    gap: 10px;
+    width: 100%;
+}
+
+.left-column {
+    width: 340px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
+}
+
+.middle-column {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+}
+
+.right-column {
+    width: 380px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow-y: auto;
 }
 
 .side {
@@ -69,33 +100,41 @@ body {
     overflow: hidden;
 }
 
-.camera-controls {
+/* Camera controls box */
+.camera-controls-box {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    background: rgba(0,0,0,0.6);
-    border-radius: 8px;
-    padding: 8px;
-    color: #ddd;
-    width: 100px;
-    margin-right: 12px;
+    gap: 10px;
 }
 
-.camera-controls h4 {
-    margin: 0 0 6px 0;
-    font-size: 14px;
+.camera-controls-box h4 {
+    margin: 0 0 8px 0;
+    font-size: 16px;
     color: #4CAF50;
+    text-align: center;
 }
 
-.camera-controls .control-row {
+.camera-controls-box .control-row {
     display: flex;
     align-items: center;
     gap: 8px;
 }
 
-.camera-controls label { width: 60px; font-size: 12px; }
-.camera-controls input[type="range"] { flex: 1; }
-.camera-controls span { width: 20px; text-align: center; font-weight: bold; }
+.camera-controls-box label {
+    width: 80px;
+    font-size: 13px;
+}
+
+.camera-controls-box input[type="range"] {
+    flex: 1;
+}
+
+.camera-controls-box span {
+    width: 30px;
+    text-align: center;
+    font-weight: bold;
+    color: #4CAF50;
+}
 
 .box h2 {
     margin-top: 0;
@@ -196,12 +235,47 @@ body {
     padding-right: 10px;
 }
 
+/* Video container with aspect ratio preservation */
+.video-box {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.video-container {
+    width: 100%;
+    max-width: 640px;
+    aspect-ratio: 3 / 4; /* Portrait video 480x640 -> 3:4 aspect */
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
 .video {
-    max-width: 100%; 
-    height: auto;
-    margin: 0 auto;
+    width: 100%;
+    height: 100%;
+    object-fit: contain; /* Preserve aspect ratio */
     display: block;
-    border-radius: 20px;
+}
+
+/* Action buttons at top of middle column */
+.action-buttons-top {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    padding: 10px 0;
+}
+
+/* Keyboard controls box at bottom of middle column */
+.keyboard-controls-box {
+    display: flex;
+    gap: 18px;
+    justify-content: center;
+    padding: 8px;
 }
 
 .col_3 {
@@ -236,25 +310,30 @@ body {
     display: block;
 }
 
-/* Rover Status Styles */
-.rover-status-container {
+/* Height box in left column */
+.height-box {
     display: flex;
-    gap: 10px; /* Reduced gap */
-    margin-top: 3px; /* Reduced margin */
-    height: 200px; /* Fixed height to prevent overflow */
+    flex-direction: column;
 }
 
-.rover-speed-box, .rover-height-box {
-    flex: 1;
-    height: 100%;
-    overflow: hidden;
-}
-
-.rover-speed-box h3, .rover-height-box h3 {
+.height-box h3 {
     text-align: center;
-    margin: 0 0 0 0; 
+    margin: 0 0 10px 0;
     color: #4CAF50;
-    font-size: 16px; /* Slightly smaller font */
+    font-size: 16px;
+}
+
+/* Speed box in left column */
+.speed-box {
+    display: flex;
+    flex-direction: column;
+}
+
+.speed-box h3 {
+    text-align: center;
+    margin: 0 0 10px 0;
+    color: #4CAF50;
+    font-size: 16px;
 }
 
 /* Drive Speed Display */
@@ -314,8 +393,8 @@ body {
 }
 
 .rover-icon {
-    width: 100px;  
-    height: 100px;  
+    width: 70px;  
+    height: 70px;  
 }
 
 .rover-image {
@@ -323,6 +402,12 @@ body {
     height: 100%;
     object-fit: contain;
     filter: brightness(0.9);
+}
+
+/* Compact rover display for left column */
+.speed-box .rover-display {
+    height: auto;
+    padding: 8px 0;
 }
 
 /* Speed Controls Display */
