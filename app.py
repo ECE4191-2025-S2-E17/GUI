@@ -14,7 +14,7 @@ import time
 
 import os
 
-ESP_IP = "192.168.137.144"
+ESP_IP = "192.168.137.54"
 VIDEO_URL = f"http://{ESP_IP}:81/stream"
 AUDIO_URL = f"http://{ESP_IP}:82/audio"
 MODEL_PATH = "./yolo_models/small-color.pt"
@@ -22,8 +22,8 @@ IS_MODEL_GREYSCALE = False
 
 # Initial camera configuration to apply on startup and expose to frontend
 CAMERA_CONFIG = {
-    "framesize": 7,  # VGA 640x480
-    "quality": 10,  # the lower the better quality
+    "framesize": 4,  # VGA 640x480
+    "quality": 63,  # the lower the better quality
     "brightness": 0,
     "contrast": 0,
 }

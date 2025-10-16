@@ -10,11 +10,13 @@ def toggle_audio():
     if audio_playing:
         # Currently playing, so pause it
         audio_reader.pause_stream()
+        audio_reader.stop_event.set()
         audio_classifier.pause()
         audio_playing = False
     else:
         # Currently paused, so play it
         audio_reader.resume_stream()
+        audio_reader.stop_event.clear()
         audio_classifier.resume()
         audio_playing = True
 
@@ -36,7 +38,7 @@ def get_audio_sightings():
             timestamp = None
 
         result = audio_classifier.get_result(logits, timestamp=timestamp)
-        if result["name"] in ["Noise", "Water", "Nothing"]:
+        if result["name"] in ["Noise", "Water", "Nothing", "Silence"]:
             continue
         print(f"Audio classification result: {result}")
         audio_results.append(result)

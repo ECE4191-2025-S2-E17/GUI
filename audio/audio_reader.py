@@ -28,6 +28,7 @@ class AudioReader(threading.Thread):
             rate=TARGET_SAMPLING_RATE_HZ,
             output=True,
         )
+        self.stop_event = threading.Event()
         self.audio_url = audio_url
         self.running = False
         self.queue = queue
@@ -56,6 +57,9 @@ class AudioReader(threading.Thread):
 
         while self.running and self.retry_count <= self.max_retries:
             try:
+                if self.stop_event.is_set():
+                    time.sleep(1)
+                    continue
                 print(
                     f"Connecting to audio stream: {self.audio_url} (attempt {self.retry_count + 1}/{self.max_retries + 1})"
                 )
@@ -73,7 +77,8 @@ class AudioReader(threading.Thread):
                     for chunk in response.iter_content(chunk_size=320):
                         if not self.running:
                             return
-
+                        if self.stop_event.is_set():
+                            break
                         sample_32 = np.frombuffer(chunk, dtype="<i4")
                         sample_24 = sample_32 >> 8
                         sample_16 = (sample_24 >> 8).astype(np.int16)
