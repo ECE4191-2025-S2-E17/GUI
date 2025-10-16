@@ -7,8 +7,8 @@ if (!ESP_IP) {
 const WS_URL = `ws://${ESP_IP}:85`;
 
 let socket = null;
-let linearSpeed = 10; // Forward/backward speed
-let angularSpeed = 10; // Turning speed
+let linearSpeed = 50; // Forward/backward speed
+let angularSpeed = 50; // Turning speed
 const SPEED_INCREMENT = 10;
 const MAX_SPEED = 100;
 const MIN_SPEED = -100;
@@ -26,43 +26,63 @@ let robotState = {
   wheelSpeeds: { FL: 0, RL: 0, FR: 0, RR: 0 }, // RPM
   suspension: { height: 0, pulses: 0 },
 };
-
 // Initialize WebSocket connection
 function initWebSocket() {
-  socket = new WebSocket(WS_URL);
+  console.log("=== WebSocket Initialization ===");
+  console.log("ESP_IP:", ESP_IP);
+  console.log("WS_URL:", WS_URL);
+  console.log("Attempting to connect...");
 
-  socket.onopen = function () {
-    console.log("Connected to ESP32 Motor Controller");
-    updateRobotStatus("🟢", "Connected");
-  };
+  try {
+    socket = new WebSocket(WS_URL);
+    console.log("WebSocket object created, state:", socket.readyState);
+    // readyState: 0=CONNECTING, 1=OPEN, 2=CLOSING, 3=CLOSED
 
-  socket.onclose = function () {
-    console.log("Disconnected from ESP32. Reconnecting...");
-    updateRobotStatus("❌", "Disconnected");
-    setTimeout(initWebSocket, 1000); // Reconnect after 2 seconds
-  };
+    socket.onopen = function () {
+      console.log("✓ WebSocket OPENED - Connected to ESP32 Motor Controller");
+      console.log("  readyState:", socket.readyState);
+      updateRobotStatus("🟢", "Connected");
+    };
 
-  socket.onerror = function (error) {
-    console.error("WebSocket error:", error);
-    updateRobotStatus("❌", "Error");
-  };
+    socket.onclose = function (event) {
+      console.log("✗ WebSocket CLOSED");
+      console.log("  Code:", event.code);
+      console.log("  Reason:", event.reason || "No reason provided");
+      console.log("  Was clean:", event.wasClean);
+      updateRobotStatus("❌", "Disconnected");
+      console.log("  Reconnecting in 1 second...");
+      setTimeout(initWebSocket, 1000);
+    };
 
-  socket.onmessage = function (event) {
-    const message = event.data;
+    socket.onerror = function (error) {
+      console.error("✗ WebSocket ERROR occurred:");
+      console.error("  Error object:", error);
+      console.error("  readyState:", socket.readyState);
+      updateRobotStatus("❌", "Error");
+    };
 
-    // Handle different message types
-    if (message.startsWith("DATA:")) {
-      handleDataMessage(message);
-    } else if (message.startsWith("DEBUG:") || message.startsWith("INFO:")) {
-      console.log(message);
-    } else if (message.startsWith("WARNING:")) {
-      console.warn(message);
-    } else if (message.startsWith("ERROR:")) {
-      console.error(message);
-    } else {
-      console.log("Received:", message);
-    }
-  };
+    socket.onmessage = function (event) {
+      const message = event.data;
+
+      // Handle different message types
+      if (message.startsWith("DATA:")) {
+        handleDataMessage(message);
+      } else if (message.startsWith("DEBUG:") || message.startsWith("INFO:")) {
+        console.log(message);
+      } else if (message.startsWith("WARNING:")) {
+        console.warn(message);
+      } else if (message.startsWith("ERROR:")) {
+        console.error(message);
+      } else {
+        console.log("Received:", message);
+      }
+    };
+  } catch (e) {
+    console.error("✗ EXCEPTION creating WebSocket:");
+    console.error("  Exception:", e);
+    console.error("  Message:", e.message);
+    updateRobotStatus("❌", "Init Error");
+  }
 }
 
 // Helper to send control request to ESP32 camera control endpoint
