@@ -26,6 +26,7 @@ let robotState = {
   wheelSpeeds: { FL: 0, FR: 0 }, // RPM (mocked - no longer receiving from websocket)
   suspension: { height: 0, pulses: 0 },
 };
+let prev_suspension = 100000;
 
 // Mock wheel speed state
 let mockWheelSpeeds = { FL: 0, FR: 0 };
@@ -173,6 +174,8 @@ function cameraControl(varName, val) {
 // Parse DATA messages from STM32
 function handleDataMessage(message) {
   // Remove "DATA: " prefix
+  console.log("Received DATA message:", message);
+  //2147483281 ->
   const data = message.substring(6);
 
   // Parse wheel speeds: "Wheel Speeds (RPM) - FL:%+.1f RL:%+.1f FR:%+.1f RR:%+.1f"
@@ -191,16 +194,21 @@ function handleDataMessage(message) {
     return;
   }
 
-  // Parse suspension: "Suspension %.2f (Total Pulses: %+ld)"
+  // Parse suspension: "Suspension <number>"
   const suspensionMatch = data.match(
-    /Suspension ([+-]?\d+\.?\d*) \(Total Pulses: ([+-]?\d+)\)/
+    /Suspension ([+-]?\d+)/
   );
   if (suspensionMatch) {
+    const pulses = parseInt(suspensionMatch[1]);
+    const pulseChange = pulses - prev_suspension;
+    prev_suspension = pulses;
     robotState.suspension = {
-      height: parseFloat(suspensionMatch[1]),
-      pulses: parseInt(suspensionMatch[2]),
+      height: robotState.suspension.height - pulseChange * (1/20),
+      pulses: pulses,
     };
     console.log("Suspension:", robotState.suspension);
+    console.log("Height:", robotState.suspension.height);
+    console.log("Pulses:", robotState.suspension.pulses);
     updateHeightDisplay(); // Update display immediately when new data arrives
     return;
   }
@@ -471,7 +479,7 @@ function updateHeightDisplay() {
   if (heightNumber && heightFill && heightIndicator) {
     const height = robotState.suspension.height || 72; // Use real data or default to 72mm
     const minHeight = 70; // Minimum height 70mm
-    const maxHeight = 120; // Maximum height 120mm
+    const maxHeight = 150; // Maximum height 150mm
 
     // Update number display
     heightNumber.textContent = height.toFixed(1);
@@ -484,6 +492,13 @@ function updateHeightDisplay() {
     const indicatorTop = 100 - percentage;
     heightIndicator.style.top = `${Math.max(0, Math.min(100, indicatorTop))}%`;
   }
+}
+
+// Zero suspension function
+function zeroSuspension() {
+  robotState.suspension.height = 140;
+  console.log("Sent zero suspension command");
+  updateHeightDisplay();
 }
 
 // Rover speed display functions - uses robotState.wheelSpeeds
