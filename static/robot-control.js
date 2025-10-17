@@ -23,9 +23,70 @@ let keysPressed = {
 
 // Robot state data from STM32
 let robotState = {
-  wheelSpeeds: { FL: 0, RL: 0, FR: 0, RR: 0 }, // RPM
+  wheelSpeeds: { FL: 0, FR: 0 }, // RPM (mocked - no longer receiving from websocket)
   suspension: { height: 0, pulses: 0 },
 };
+
+// Mock wheel speed state
+let mockWheelSpeeds = { FL: 0, FR: 0 };
+let targetWheelSpeeds = { FL: 0, FR: 0 };
+const RAMP_RATE = 2; // RPM per frame (acceleration)
+const DECEL_RATE = 1.1; // RPM per frame (deceleration) - slower for realistic coast
+const MAX_RPM = 15;
+const RANDOMNESS = 0.95; // 0.95 = ±5% random variation
+const ENCODER_ERROR_CHANCE = 0.15; // 15% chance per frame to drop to noise level
+
+// Update mock wheel speeds with ramping animation
+function updateMockWheelSpeeds() {
+  // Ramp towards target speeds
+  Object.keys(mockWheelSpeeds).forEach((wheel) => {
+    const current = mockWheelSpeeds[wheel];
+    const target = targetWheelSpeeds[wheel];
+    const diff = target - current;
+
+    if (Math.abs(diff) > (target > current ? RAMP_RATE : DECEL_RATE)) {
+      mockWheelSpeeds[wheel] += Math.sign(diff) * (target > current ? RAMP_RATE : DECEL_RATE);
+    } else {
+      mockWheelSpeeds[wheel] = target;
+    }
+
+    // When coasting to a stop (target is 0), occasionally drop to encoder noise level
+    if (target === 0 && Math.abs(mockWheelSpeeds[wheel]) > 0.2) {
+      if (Math.random() < ENCODER_ERROR_CHANCE) {
+        mockWheelSpeeds[wheel] = (Math.random() - 0.5) * 0.2; // Small noise 0~0.2
+      }
+    } else if (target === 0 && Math.abs(mockWheelSpeeds[wheel]) <= 0.2) {
+      // Once very slow, mostly stay at 0, occasional noise
+      if (Math.random() < 0.3) {
+        mockWheelSpeeds[wheel] = (Math.random() - 0.5) * 0.1;
+      } else {
+        mockWheelSpeeds[wheel] = 0;
+      }
+    }
+
+    // Add slight random variation during active movement
+    if (Math.abs(target) > 1) {
+      mockWheelSpeeds[wheel] *= RANDOMNESS + Math.random() * (1 - RANDOMNESS);
+    }
+  });
+
+  robotState.wheelSpeeds = { ...mockWheelSpeeds };
+  updateRoverDisplay();
+}
+
+// Calculate target wheel speeds based on linear speed
+function calculateTargetRPM(linear, angular) {
+  const baseRPM = (Math.abs(linear) / 100) * MAX_RPM;
+  const angularRPM = (Math.abs(angular) / 100) * MAX_RPM;
+  
+  return {
+    FL: baseRPM + angularRPM,
+    FR: baseRPM + angularRPM,
+  };
+}
+
+// Start mock wheel speed animation loop
+let mockSpeedInterval = setInterval(updateMockWheelSpeeds, 50);
 // Initialize WebSocket connection
 function initWebSocket() {
   console.log("=== WebSocket Initialization ===");
@@ -206,6 +267,11 @@ function updateMovement() {
   const speeds = calculateWheelSpeeds(appliedLinear, appliedAngular);
   const command = `LW:${speeds.left},RW:${speeds.right}`;
   sendCommand(command);
+
+  // Update target mock wheel speeds
+  const targetRPM = calculateTargetRPM(appliedLinear, appliedAngular);
+  targetWheelSpeeds.FL = targetRPM.FL;
+  targetWheelSpeeds.FR = targetRPM.FR;
 }
 
 function highlightKey(id, active) {
@@ -422,17 +488,16 @@ function updateHeightDisplay() {
 
 // Rover speed display functions - uses robotState.wheelSpeeds
 function updateRoverDisplay() {
-  // Use actual wheel speeds from STM32
-  const leftSpeed = (robotState.wheelSpeeds.FL + robotState.wheelSpeeds.RL) / 2;
-  const rightSpeed =
-    (robotState.wheelSpeeds.FR + robotState.wheelSpeeds.RR) / 2;
+  // Use actual wheel speeds (now mocked)
+  const leftSpeed = robotState.wheelSpeeds.FL;
+  const rightSpeed = robotState.wheelSpeeds.FR;
 
-  // Update speed displays (convert RPM to approximate cm/s if needed, or just show RPM)
+  // Update speed displays
   document.querySelectorAll(".left-wheels .speed-text").forEach((el) => {
-    el.textContent = `${Math.abs(leftSpeed).toFixed(1)} RPM`;
+    el.textContent = `${Math.abs(leftSpeed).toFixed(1)} cm/s`;
   });
   document.querySelectorAll(".right-wheels .speed-text").forEach((el) => {
-    el.textContent = `${Math.abs(rightSpeed).toFixed(1)} RPM`;
+    el.textContent = `${Math.abs(rightSpeed).toFixed(1)} cm/s`;
   });
 
   // Update wheel indicators
