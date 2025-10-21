@@ -14,11 +14,11 @@ import time
 
 import os
 
-ESP_IP = "192.168.137.133"
+ESP_IP = "192.168.137.108"
 VIDEO_URL = f"http://{ESP_IP}:81/stream"
 AUDIO_URL = f"http://{ESP_IP}:82/audio"
-MODEL_PATH = "./yolo_models/best_greyscale.pt"
-#IS_MODEL_GREYSCALE = "greyscale" in MODEL_PATH.lower()
+MODEL_PATH = "./yolo_models/nano-color-v11.pt"
+# IS_MODEL_GREYSCALE = "greyscale" in MODEL_PATH.lower()
 IS_MODEL_GREYSCALE = False
 # Initial camera configuration to apply on startup and expose to frontend
 CAMERA_CONFIG = {
@@ -85,7 +85,6 @@ def generate_frames():
             )
             _, frame = cv2.imencode(".jpg", placeholder)
             frame = frame.tobytes()
-
         yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + frame + b"\r\n")
 
 
@@ -139,15 +138,27 @@ def toggle_ai():
     return render_template("partials/ai_button.html", ai_on=camera.ai_on)
 
 
-@app.route("/status", methods=["GET"])
-def get_status():
+@app.route("/camera_status")
+def get_camera_status():
     camera_connected = camera.video and camera.video.isOpened()
-    return render_template(
-        "partials/status.html",
-        recording=camera.recording,
-        camera_connected=camera_connected,
-        ai_on=camera.ai_on,
-    )
+    icon = "🟢" if camera_connected else "❌"
+    return f"""
+    <div style="text-align: center; width: auto; height: fit-content;">
+        {icon}<br>
+        <span style="font-size: 12px;">Camera</span>
+    </div>
+    """
+
+
+@app.route("/ai_status")
+def get_ai_status():
+    icon = "🟢" if camera.ai_on else "❌"
+    return f"""
+    <div style="text-align: center; width: auto; height: fit-content;">
+        {icon}<br>
+        <span style="font-size: 12px;">AI</span>
+    </div>
+    """
 
 
 @app.route("/sightings", methods=["GET"])
@@ -167,7 +178,3 @@ def get_sightings():
         </div>
         """
     return sightings_html
-
-
-if __name__ == "__main__":
-    app.run(debug=True, use_reloader=False, threaded=True)

@@ -36,19 +36,17 @@
 
     /* Timer styling */
     #timer {
-    display: block;
-    margin: 0 auto 25px auto; 
-    text-align: center;
-    color: #4CAF50;
-    font-size: 30px;
-    font-weight: bold;
-    padding: 8px 16px;
-    border-radius: 8px;
-    border: 2px solid #4CAF50;
-    width: fit-content;
-}
-
-
+      display: block;
+      margin: 0 auto 25px auto;
+      text-align: center;
+      color: #4CAF50;
+      font-size: 30px;
+      font-weight: bold;
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 2px solid #4CAF50;
+      width: fit-content;
+    }
   </style>
 </head>
 
@@ -57,7 +55,7 @@
   <div class="app three-column-layout">
     <!-- LEFT COLUMN: Camera controls, Height, Speed -->
     <div class="left-column">
-      
+
       <div id="timer-box">
         <span id="timer">00:00</span>
       </div>
@@ -110,7 +108,8 @@
             <span class="height-unit">mm</span>
           </div>
         </div>
-        <button class="btn btn-sm btn-primary" onclick="zeroSuspension()" style="width: 100%; margin-top: 10px;">Zero Suspension</button>
+        <button class="btn btn-sm btn-primary" onclick="zeroSuspension()" style="width: 100%; margin-top: 10px;">Zero
+          Suspension</button>
       </div>
 
       <!-- Drive Speed Display -->
@@ -161,7 +160,7 @@
     <div class="middle-column">
       <!-- Action Buttons Top -->
       <div class="action-buttons-top">
-        <button class="img-btn" hx-post="/screenshot" hx-target="#status-content" hx-swap="innerHTML"
+        <button class="img-btn" hx-post="/screenshot" hx-target="#status-messages" hx-swap="innerHTML"
           hx-indicator="#screenshot-loading">
           <img src="{{ url_for('static', filename='assets/ss_button.png') }}" alt="Screenshot">
           <div id="screenshot-loading" class="htmx-indicator">📸</div>
@@ -186,6 +185,9 @@
           </div>
           <div id="ai-loading" class="htmx-indicator">📸</div>
         </button>
+        <div id="fps-display" style="margin-left: 20px; color: #4CAF50; font-size: 18px; font-weight: bold;">
+          Loading FPS...
+        </div>
       </div>
 
       <!-- Video Feed -->
@@ -200,8 +202,17 @@
     <div class="right-column">
       <div class="box status-box"
         style="display: flex; flex-direction: column; align-items: center; text-align: center;">
-        <div id="status-content" hx-get="/status" hx-trigger="load, every 1s" hx-swap="innerHTML">
-          Loading status...
+        <div style="gap: 20px; min-height:40px;display: flex; flex-direction: row; align-items: center; ">
+          <div id="camera-status" hx-get="/camera_status" hx-trigger="load, every 1s" hx-swap="innerHTML">
+            Loading...
+          </div>
+          <div id="ai-status" hx-get="/ai_status" hx-trigger="load, every 1s" hx-swap="innerHTML">
+            Loading...
+          </div>
+          <div id="robot-status-container" style="text-align: center; height: fit-content;">
+            <span id="robot-status-icon" style="width: auto; height: fit-content;">❌</span><br>
+            <span style="font-size: 12px;">Robot</span>
+          </div>
         </div>
       </div>
       <div class="box sightings-box">
@@ -263,6 +274,21 @@
     const secs = String(seconds % 60).padStart(2, '0');
     timer.textContent = `${mins}:${secs}`;
   }, 1000);
+
+  // FPS calculation based on video frame loads
+  const videoImg = document.querySelector('.video');
+  const fpsDisplay = document.getElementById('fps-display');
+  let lastFrameTime = performance.now();
+
+  videoImg.addEventListener('load', () => {
+    const now = performance.now();
+    const delta = now - lastFrameTime;
+    if (delta > 0) {
+      const fps = 1000 / delta;
+      fpsDisplay.textContent = `${fps.toFixed(1)} FPS`;
+    }
+    lastFrameTime = now;
+  });
 </script>
 
 
