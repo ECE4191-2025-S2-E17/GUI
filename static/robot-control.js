@@ -13,6 +13,7 @@ const SPEED_INCREMENT = 10;
 const MAX_SPEED = 100;
 const MIN_SPEED = -100;
 
+let led_state = false; // Track LED state for toggling
 // Track which movement keys are pressed
 let keysPressed = {
   w: false,
@@ -25,8 +26,18 @@ let keysPressed = {
 let robotState = {
   wheelSpeeds: { FL: 0, FR: 0 }, // RPM (mocked - no longer receiving from websocket)
   suspension: { height: 0, pulses: 0 },
+  heartbeat: Date.now(),
 };
 let prev_suspension = 100000;
+
+setInterval(() => {
+  const now = Date.now();
+  if (now - robotState.heartbeat > 3000) {
+    updateRobotStatus("❌", "No Heartbeat");
+  } else {
+    updateRobotStatus("🟢", "Connected");
+  }
+}, 1000);
 
 // Mock wheel speed state
 let mockWheelSpeeds = { FL: 0, FR: 0 };
@@ -46,7 +57,8 @@ function updateMockWheelSpeeds() {
     const diff = target - current;
 
     if (Math.abs(diff) > (target > current ? RAMP_RATE : DECEL_RATE)) {
-      mockWheelSpeeds[wheel] += Math.sign(diff) * (target > current ? RAMP_RATE : DECEL_RATE);
+      mockWheelSpeeds[wheel] +=
+        Math.sign(diff) * (target > current ? RAMP_RATE : DECEL_RATE);
     } else {
       mockWheelSpeeds[wheel] = target;
     }
@@ -79,7 +91,7 @@ function updateMockWheelSpeeds() {
 function calculateTargetRPM(linear, angular) {
   const baseRPM = (Math.abs(linear) / 100) * MAX_RPM;
   const angularRPM = (Math.abs(angular) / 100) * MAX_RPM;
-  
+
   return {
     FL: baseRPM + angularRPM,
     FR: baseRPM + angularRPM,
@@ -135,8 +147,12 @@ function initWebSocket() {
         console.warn(message);
       } else if (message.startsWith("ERROR:")) {
         console.error(message);
+      } else if (message.startsWith("HEARTBEAT")) {
+        updateRobotStatus("🟢", "Connected");
+        robotState.heartbeat = Date.now();
+        console.log(message);
       } else {
-        console.log("Received:", message);
+        console.log("Unknown message:", message);
       }
     };
   } catch (e) {
@@ -177,6 +193,7 @@ function handleDataMessage(message) {
   console.log("Received DATA message:", message);
   //2147483281 ->
   const data = message.substring(6);
+  console.log("DATA message:", data);
 
   // Parse wheel speeds: "Wheel Speeds (RPM) - FL:%+.1f RL:%+.1f FR:%+.1f RR:%+.1f"
   const wheelSpeedMatch = data.match(
@@ -195,15 +212,13 @@ function handleDataMessage(message) {
   }
 
   // Parse suspension: "Suspension <number>"
-  const suspensionMatch = data.match(
-    /Suspension ([+-]?\d+)/
-  );
+  const suspensionMatch = data.match(/Suspension ([+-]?\d+)/);
   if (suspensionMatch) {
     const pulses = parseInt(suspensionMatch[1]);
     const pulseChange = pulses - prev_suspension;
     prev_suspension = pulses;
     robotState.suspension = {
-      height: robotState.suspension.height - pulseChange * (1/20),
+      height: robotState.suspension.height - pulseChange * (1 / 20),
       pulses: pulses,
     };
     console.log("Suspension:", robotState.suspension);
@@ -297,6 +312,12 @@ document.addEventListener("keydown", function (event) {
   if (event.repeat) return; // Ignore key repeat
 
   switch (event.key) {
+    case "u":
+    case "U":
+      led_state = !led_state;
+      const led_command = led_state ? "LED:ON" : "LED:OFF";
+      sendCommand(led_command);
+      break;
     // Drive - WASD controls movement (linear and angular)
     case "w":
       highlightKey("key-w", true);
