@@ -1,3 +1,4 @@
+import logging
 from flask import (
     Flask,
     render_template,
@@ -6,6 +7,7 @@ from flask import (
 )
 from datetime import datetime
 
+from collections import deque
 from camera import VideoCamera
 import json
 import numpy as np
@@ -35,12 +37,16 @@ camera = VideoCamera(
     greyscale=IS_MODEL_GREYSCALE,
     initial_camera_config=CAMERA_CONFIG,
 )
+log = logging.getLogger("werkzeug")
+log.setLevel(logging.WARNING)
 app = Flask(__name__)
 app.config["AUDIO_URL"] = AUDIO_URL
 app.config["VIDEO_URL"] = VIDEO_URL
 os.makedirs("screenshots", exist_ok=True)
 
 frame = None
+frame_time = time.perf_counter()
+frame_interval = deque(maxlen=10)
 
 # Debug: Print registered routes
 with app.app_context():
@@ -85,6 +91,11 @@ def generate_frames():
             )
             _, frame = cv2.imencode(".jpg", placeholder)
             frame = frame.tobytes()
+        global frame_interval, frame_time
+        frame_interval.append(time.perf_counter() - frame_time)
+        if len(frame_interval) >= 10:
+            frame_interval.popleft()
+        frame_time = time.perf_counter()
         yield (b"--frame\r\n" b"Content-Type: image/jpeg\r\n\r\n" + frame + b"\r\n")
 
 
@@ -178,3 +189,12 @@ def get_sightings():
         </div>
         """
     return sightings_html
+
+
+@app.route("/fps", methods=["GET"])
+def get_fps():
+    if frame_interval and len(frame_interval) > 0:
+        fps = 1.0 / (sum(frame_interval) / len(frame_interval))
+        return f"{fps:.1f} FPS"
+    else:
+        return "Loading FPS..."

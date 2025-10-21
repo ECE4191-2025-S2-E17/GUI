@@ -218,7 +218,7 @@ function handleDataMessage(message) {
     const pulseChange = pulses - prev_suspension;
     prev_suspension = pulses;
     robotState.suspension = {
-      height: robotState.suspension.height - pulseChange * (1 / 20),
+      height: robotState.suspension.height + pulseChange * (1 / 35),
       pulses: pulses,
     };
     console.log("Suspension:", robotState.suspension);

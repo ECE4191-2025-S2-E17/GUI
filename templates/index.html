@@ -185,18 +185,21 @@
           </div>
           <div id="ai-loading" class="htmx-indicator">📸</div>
         </button>
-        <div id="fps-display" style="margin-left: 20px; color: #4CAF50; font-size: 18px; font-weight: bold;">
-          Loading FPS...
+        <div hx-get="/fps" hx-trigger="load, every 0.1s" hx-swap="innerHTML" hx-target="#fps-indicator" hx-indicator=""
+          style="margin-left: 20px; color: #4CAF50; font-size: 18px; font-weight: bold;">
+          <span id="fps-indicator">Loading FPS...</span>
         </div>
       </div>
 
       <!-- Video Feed -->
       <div class="box video-box">
         <div class="video-container">
-          <img class="video" src="{{ url_for('video_feed') }}" />
+          <img id="liveFeed" class="video" src="{{ url_for('video_feed') }}" alt="Live Stream">
         </div>
+        <canvas id="hiddenCanvas" style="display: none;"></canvas>
       </div>
     </div>
+
 
     <!-- RIGHT COLUMN: Status and sightings -->
     <div class="right-column">
@@ -274,21 +277,6 @@
     const secs = String(seconds % 60).padStart(2, '0');
     timer.textContent = `${mins}:${secs}`;
   }, 1000);
-
-  // FPS calculation based on video frame loads
-  const videoImg = document.querySelector('.video');
-  const fpsDisplay = document.getElementById('fps-display');
-  let lastFrameTime = performance.now();
-
-  videoImg.addEventListener('load', () => {
-    const now = performance.now();
-    const delta = now - lastFrameTime;
-    if (delta > 0) {
-      const fps = 1000 / delta;
-      fpsDisplay.textContent = `${fps.toFixed(1)} FPS`;
-    }
-    lastFrameTime = now;
-  });
 </script>
 
 
