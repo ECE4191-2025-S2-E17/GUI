@@ -13,6 +13,9 @@ const SPEED_INCREMENT = 10;
 const MAX_SPEED = 100;
 const MIN_SPEED = -100;
 
+let lastCommandSent = 0;
+let commandLatencies = [];
+
 let led_state = false; // Track LED state for toggling
 // Track which movement keys are pressed
 let keysPressed = {
@@ -151,6 +154,19 @@ function initWebSocket() {
         updateRobotStatus("🟢", "Connected");
         robotState.heartbeat = Date.now();
         console.log(message);
+      } else if (message.startsWith("ACK")) {
+        commandLatencies.push(Date.now() - lastCommandSent);
+        console.log(
+          "Command latency (ms):",
+          commandLatencies[commandLatencies.length - 1]
+        );
+        commandLatencies = commandLatencies.slice(-10); // Keep last 10 latencies
+        const avgLatency = Math.round(
+          commandLatencies.reduce((a, b) => a + b, 0) / commandLatencies.length
+        );
+        console.log("Latency history (ms):", commandLatencies);
+        document.getElementById("latency-indicator").textContent =
+          avgLatency + " ms";
       } else {
         console.log("Unknown message:", message);
       }
@@ -234,6 +250,7 @@ function handleDataMessage(message) {
 
 // Send command to ESP32
 function sendCommand(command) {
+  lastCommandSent = Date.now();
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(command);
     console.log("Sent command:", command);

@@ -19,7 +19,7 @@ import os
 ESP_IP = "192.168.137.108"
 VIDEO_URL = f"http://{ESP_IP}:81/stream"
 AUDIO_URL = f"http://{ESP_IP}:82/audio"
-MODEL_PATH = "./yolo_models/nano-color-v11.pt"
+MODEL_PATH = "./yolo_models/demo_grayscale.pt"
 # IS_MODEL_GREYSCALE = "greyscale" in MODEL_PATH.lower()
 IS_MODEL_GREYSCALE = False
 # Initial camera configuration to apply on startup and expose to frontend
